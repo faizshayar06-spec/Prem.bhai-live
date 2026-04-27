@@ -1,0 +1,50 @@
+name: 24/7 Persistent Stream (Auto-Reconnect)
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [restart_stream]
+
+jobs:
+  stream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt update
+          sudo apt install -y ffmpeg
+
+      - name: Start Loop Stream
+        env:
+          S1: ${{ secrets.STREAM_1_URL }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          # FFmpeg with Photo Loop & Shrink/Pulse Effect
+          # -re (Real-time speed) aur -vsync cfr se timing sahi rahegi
+          # filter_complex handles the shrink/pulse effect based on time (t)
+          ffmpeg -re -loop 1 -i photo.jpg -re -stream_loop -1 -i audio6.mp3 \
+          -filter_complex \
+          "[0:v]scale='1280*if(lte(mod(t,2),1),1-mod(t,1)/20,1-(1-mod(t,1))/20)':-1:force_original_aspect_ratio=center,crop=1280:720,setsar=1[v]" \
+          -map "[v]" -map 1:a:0 -c:v libx264 -preset ultrafast -tune zerolatency \
+          -g 60 -keyint_min 60 -sc_threshold 0 -vsync cfr \
+          -pix_fmt yuv420p -b:v 2500k -maxrate 2500k -bufsize 5000k \
+          -c:a aac -b:a 128k -ar 44100 -shortest \
+          -f flv "$S1" &
+          
+          # Wait for 340 minutes (5 hours 40 mins)
+          sleep 340m 
+          
+          echo "Triggering next workflow to maintain 24/7 stream..."
+          curl -X POST -H "Authorization: token $GH_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ github.repository }}/dispatches \
+          -d '{"event_type": "restart_stream"}'
+          
+          sleep 30s
+          exit 0
+          
