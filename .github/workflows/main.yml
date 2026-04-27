@@ -26,7 +26,7 @@ jobs:
         run: |
           # Fixed Formula: Har 2 second mein halka sa shrink aur expand hoga
           # 1.04 se 1.00 ke beech pulse karega (bilkul video jaisa)
-          ffmpeg -re -loop 1 -i photo.jpg -re -stream_loop -1 -i audio6.mp3 \
+          ffmpeg -re -loop 1 -i photo.jpg -re -stream_loop -1 -i audio.mp3 \
           -filter_complex \
           "[0:v]scale=1366:768,zoompan=z='if(lte(mod(on,60),30),1.0+mod(on,30)/750,1.04-mod(on,30)/750)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1280x720:fps=30[v]" \
           -map "[v]" -map 1:a:0 -c:v libx264 -preset ultrafast -tune zerolatency \
