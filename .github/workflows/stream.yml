@@ -1,18 +1,21 @@
-name: Continuous Stream Restart
+name: 12H Stream
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 */6 * * *'
+    inputs:
+      run_count:
+        description: 'Run count'
+        default: '1'
+        required: false
 
 jobs:
   live:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup Audio & Display
+      - name: Install System Deps
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg pulseaudio
@@ -26,21 +29,22 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Install Libs
-        run: pip install selenium webdriver-manager
-
-      - name: Run Bot
+      - name: Run Script
         env:
           YT_STREAM_KEY: ${{ secrets.YT_STREAM_KEY }}
           DISPLAY: :99
-        run: python stream_bot.py
+        run: |
+          pip install selenium webdriver-manager
+          python streamyard_bot.py
 
-      - name: Force Restart
+      - name: Restart Round
         if: always()
         run: |
-          echo "6 Hours almost done. Restarting now..."
-          curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream.yml/dispatches \
-          -d '{"ref":"main"}'
+          CURRENT_RUN=${{ github.event.inputs.run_count || '1' }}
+          if [ "$CURRENT_RUN" -lt "2" ]; then
+            curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream.yml/dispatches \
+            -d '{"ref":"main", "inputs": {"run_count": "2"}}'
+          fi
           
