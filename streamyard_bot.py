@@ -6,8 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIGURATION ---
-# Yahan apna StreamYard Guest Link daalein
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
+GUEST_URL = "https://streamyard.com/invite/XXXXXX" # Apna Guest Link Dalein
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
@@ -26,7 +25,6 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(5)
 
-        # Name Entry aur Studio Join logic
         driver.execute_script("""
             let input = document.querySelector('input');
             if(input) {
@@ -39,10 +37,8 @@ def start_stream():
             }, 2000);
         """)
         
-        print("Waiting for Studio load...")
         time.sleep(15)
 
-        # Advance JavaScript: Sirf 'Add to stage' click hoga, 'Remove' nahi.
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -50,16 +46,14 @@ def start_stream():
                 let removeBtn = btns.find(b => b.innerText.includes('Remove'));
                 if (addBtn && !removeBtn) {
                     addBtn.click();
-                    console.log('Bot: Added to stage');
                 }
             }, 5000);
         """)
-        print("Auto-Add Logic Running...")
+        print("Bot logic active.")
 
     except Exception as e:
-        print(f"Selenium Error: {e}")
+        print(f"Error: {e}")
 
-    # FFmpeg Command (Video + Audio)
     ffmpeg_cmd = [
         'ffmpeg',
         '-f', 'x11grab', '-s', '1920x1080', '-i', ':99.0',
@@ -69,13 +63,10 @@ def start_stream():
         '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
     ]
     
-    # 5 Hours 50 Minutes (21000 Seconds)
     process = subprocess.Popen(ffmpeg_cmd)
-    print("Stream Started. Will run for 5h 50m...")
-    time.sleep(21000) 
+    time.sleep(21000) # 5 ghante 50 minute
     process.terminate()
-    driver.quit()
 
 if __name__ == "__main__":
     start_stream()
-  
+    
