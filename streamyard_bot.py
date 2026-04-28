@@ -7,7 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIGURATION ---
 # Yahan apna StreamYard Guest Link daalein
-GUEST_URL = "https://streamyard.com/invite/xxxxxxx" 
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
