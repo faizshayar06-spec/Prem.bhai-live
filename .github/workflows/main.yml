@@ -1,47 +1,55 @@
-name: 24/7 Persistent Stream (Auto-Reconnect)
+name: 12H Limited Stream
 
 on:
   workflow_dispatch:
-  repository_dispatch:
-    types: [restart_stream]
+    inputs:
+      run_count:
+        description: 'Current run number (1 or 2)'
+        default: '1'
+        required: false
 
 jobs:
-  stream:
+  live:
     runs-on: ubuntu-latest
-    timeout-minutes: 360 
-
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Install FFmpeg
+      - name: Setup Audio & Display
         run: |
-          sudo apt update
-          sudo apt install -y ffmpeg
+          sudo apt-get update
+          sudo apt-get install -y xvfb ffmpeg pulseaudio
+          # PulseAudio Virtual Sink setup for StreamYard sound
+          pulseaudio -D --exit-idle-time=-1
+          pacmd load-module module-virtual-sink sink_name=vss
+          pacmd set-default-sink vss
+          Xvfb :99 -screen 0 1920x1080x24 &
 
-      - name: Start Loop Stream
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Libs
+        run: pip install -r requirements.txt
+
+      - name: Run Bot
         env:
-          S1: ${{ secrets.STREAM_1_URL }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          YT_STREAM_KEY: ${{ secrets.YT_STREAM_KEY }}
+          DISPLAY: :99
+        run: python stream_bot.py
+
+      - name: Auto-Restart Logic (Limit to 12H)
+        if: always()
         run: |
-          # Fixed Formula: Har 2 second mein halka sa shrink aur expand hoga
-          # 1.04 se 1.00 ke beech pulse karega (bilkul video jaisa)
-          ffmpeg -re -loop 1 -i photo.jpg -re -stream_loop -1 -i audio.mp3 \
-          -filter_complex \
-          "[0:v]scale=1366:768,zoompan=z='if(lte(mod(on,60),30),1.0+mod(on,30)/750,1.04-mod(on,30)/750)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1280x720:fps=30[v]" \
-          -map "[v]" -map 1:a:0 -c:v libx264 -preset ultrafast -tune zerolatency \
-          -g 60 -keyint_min 60 -sc_threshold 0 -vsync cfr \
-          -pix_fmt yuv420p -b:v 2500k -maxrate 2500k -bufsize 5000k \
-          -c:a aac -b:a 128k -ar 44100 \
-          -f flv "$S1" &
-          
-          sleep 340m 
-          
-          curl -X POST -H "Authorization: token $GH_TOKEN" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/${{ github.repository }}/dispatches \
-          -d '{"event_type": "restart_stream"}'
-          
-          sleep 30s
-          exit 0
+          CURRENT_RUN=${{ github.event.inputs.run_count || '1' }}
+          if [ "$CURRENT_RUN" -lt "2" ]; then
+            echo "Round 1 finished. Triggering Round 2 for 12H completion..."
+            curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream.yml/dispatches \
+            -d '{"ref":"main", "inputs": {"run_count": "2"}}'
+          else
+            echo "12 Hours (Round 2) finished. Stream stopped successfully."
+          fi
           
