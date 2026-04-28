@@ -6,7 +6,7 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIGURATION ---
-GUEST_URL = "https://streamyard.com/invite/XXXXXX" # Apna Guest Link Dalein
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna Guest Link Dalein
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
