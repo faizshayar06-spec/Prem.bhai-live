@@ -6,28 +6,29 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
-# --- CONFIGURATION ---
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna link yahan dalein
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
     chrome_options = Options()
-    chrome_options.add_argument("--headless")
+    # Headless mode kabhi-kabhi black screen deta hai, 
+    # isliye virtual display (Xvfb) ke saath headless rehne dein.
+    chrome_options.add_argument("--headless=new") 
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
-    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
+    chrome_options.add_argument("--disable-gpu")
 
-    # Fixed Driver Initialization
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("Opening StreamYard...")
+        print("Loading StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(5)
+        time.sleep(10) # Content load hone ka zyada wait
 
+        # Entry logic
         driver.execute_script("""
             let input = document.querySelector('input');
             if(input) {
@@ -37,36 +38,36 @@ def start_stream():
             setTimeout(() => {
                 let btn = Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Enter'));
                 if(btn) btn.click();
-            }, 2000);
+            }, 3000);
         """)
         
-        time.sleep(15)
+        print("Studio mein enter ho rahe hain...")
+        time.sleep(20) # Studio aur Stage load hone ka extra time
 
+        # Auto-Add to Stage
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
                 let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
                 let removeBtn = btns.find(b => b.innerText.includes('Remove'));
-                if (addBtn && !removeBtn) {
-                    addBtn.click();
-                }
+                if (addBtn && !removeBtn) { addBtn.click(); }
             }, 5000);
         """)
-        print("Bot logic active.")
 
-        # FFmpeg Command
+        # FFmpeg with 'drawtext' for testing (agar black screen aaye toh text dikhega)
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-s', '1920x1080', '-i', ':99.0',
             '-f', 'pulse', '-i', 'default',
-            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '3500k',
-            '-c:a', 'aac', '-b:a', '128k', '-ar', '44100',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '3000k',
+            '-pix_fmt', 'yuv420p', # Compatibility ke liye
+            '-c:a', 'aac', '-b:a', '128k',
             '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Streaming... will run for 5h 55m.")
-        time.sleep(21300) # 5 hours 55 minutes
+        print("Streaming active...")
+        time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
