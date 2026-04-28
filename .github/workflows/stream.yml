@@ -1,0 +1,46 @@
+name: Continuous Stream Restart
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Audio & Display
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb ffmpeg pulseaudio
+          pulseaudio -D --exit-idle-time=-1
+          pacmd load-module module-virtual-sink sink_name=vss
+          pacmd set-default-sink vss
+          Xvfb :99 -screen 0 1920x1080x24 &
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install Libs
+        run: pip install selenium webdriver-manager
+
+      - name: Run Bot
+        env:
+          YT_STREAM_KEY: ${{ secrets.YT_STREAM_KEY }}
+          DISPLAY: :99
+        run: python stream_bot.py
+
+      - name: Force Restart
+        if: always()
+        run: |
+          echo "6 Hours almost done. Restarting now..."
+          curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream.yml/dispatches \
+          -d '{"ref":"main"}'
+          
