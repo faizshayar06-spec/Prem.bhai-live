@@ -3,10 +3,11 @@ import time
 import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIGURATION ---
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna Guest Link Dalein
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna link yahan dalein
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
@@ -18,7 +19,9 @@ def start_stream():
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
 
-    driver = webdriver.Chrome(ChromeDriverManager().install(), options=chrome_options)
+    # Fixed Driver Initialization
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
         print("Opening StreamYard...")
@@ -51,21 +54,25 @@ def start_stream():
         """)
         print("Bot logic active.")
 
+        # FFmpeg Command
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-f', 'x11grab', '-s', '1920x1080', '-i', ':99.0',
+            '-f', 'pulse', '-i', 'default',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '3500k',
+            '-c:a', 'aac', '-b:a', '128k', '-ar', '44100',
+            '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
+        ]
+        
+        process = subprocess.Popen(ffmpeg_cmd)
+        print("Streaming... will run for 5h 55m.")
+        time.sleep(21300) # 5 hours 55 minutes
+        process.terminate()
+
     except Exception as e:
         print(f"Error: {e}")
-
-    ffmpeg_cmd = [
-        'ffmpeg',
-        '-f', 'x11grab', '-s', '1920x1080', '-i', ':99.0',
-        '-f', 'pulse', '-i', 'default',
-        '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '3500k',
-        '-c:a', 'aac', '-b:a', '128k', '-ar', '44100',
-        '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
-    ]
-    
-    process = subprocess.Popen(ffmpeg_cmd)
-    time.sleep(21000) # 5 ghante 50 minute
-    process.terminate()
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     start_stream()
