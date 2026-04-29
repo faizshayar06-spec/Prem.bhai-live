@@ -19,79 +19,58 @@ def start_stream():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
-    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("Opening StreamYard...")
+        print("Bot Started. Jalwa loading...")
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # SEQUENCE 1: Cookies / Continue / Accept All
-        print("Step 1: Handling Popups...")
+        # STEP 1: COOKIES HATAO (Java Logic)
+        print("Step 1: Cookies saaf kar raha hoon...")
         driver.execute_script("""
-            let btns = Array.from(document.querySelectorAll('button'));
-            let target = btns.find(el => 
-                el.textContent.includes('Accept') || 
-                el.textContent.includes('Continue') || 
-                el.textContent.includes('Got it')
+            let cookieBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Accept all cookies') || el.textContent.includes('Accept')
             );
-            if(target) target.click();
+            if(cookieBtn) cookieBtn.click();
         """)
         time.sleep(5)
 
-        # SEQUENCE 2: Allow Mic/Cam Access (Blue Button)
-        print("Step 2: Clicking Allow...")
-        driver.execute_script("""
-            let allowBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Allow mic/cam') || el.textContent.includes('Allow')
-            );
-            if(allowBtn) allowBtn.click();
-        """)
-        time.sleep(8)
-
-        # SEQUENCE 3: English Name Entry (Faiz)
-        print("Step 3: Typing Name (Faiz)...")
+        # STEP 2: NAAM LIKHO (Human Typing Simulation)
+        print("Step 2: Naam 'Faiz' likh raha hoon...")
         try:
-            # Display name field ko target karke pehle clear karna
+            # Sahi field ko target karna
             name_field = driver.find_element(By.NAME, "displayName")
             name_field.click()
             time.sleep(1)
             
-            # Ek-ek akshar type karna taaki error na aaye
-            bot_name = "Faiz"
-            for char in bot_name:
+            for char in "Faiz":
                 name_field.send_keys(char)
-                time.sleep(0.4)
+                time.sleep(0.5) # Slow typing taaki error na aaye
             
-            print("Name Typed. Waiting 2 seconds before Enter...")
-            time.sleep(2)
-            name_field.send_keys(Keys.ENTER)
-        except:
-            print("Field not found, using JS Force Fill...")
-            driver.execute_script("""
-                let input = document.querySelector('input[name="displayName"]') || document.querySelector('input');
-                if(input) {
-                    input.value = 'Faiz';
-                    input.dispatchEvent(new Event('input', { bubbles: true }));
-                    input.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            """)
-            time.sleep(2)
-            driver.execute_script("""
-                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                    el.textContent.includes('Enter studio')
-                );
-                if(enterBtn) enterBtn.click();
-            """)
+            print("Naam likh diya.")
+        except Exception as e:
+            print("Selenium fail, JS se naam bhar raha hoon...")
+            driver.execute_script("document.querySelector('input').value = 'Faiz';")
+            driver.execute_script("document.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));")
+
+        time.sleep(3)
+
+        # STEP 3: ENTER STUDIO (Final Hit)
+        print("Step 3: Studio mein entry maar raha hoon...")
+        driver.execute_script("""
+            let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Enter studio')
+            );
+            if(enterBtn) enterBtn.click();
+        """)
         
         print("Waiting for Studio load...")
         time.sleep(25) 
 
-        # SEQUENCE 4: Auto-Add to Stage
-        print("Step 4: Active in Studio.")
+        # STEP 4: AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -103,14 +82,12 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg
+        # FFmpeg Signal
         ffmpeg_cmd = [
-            'ffmpeg',
-            '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
+            'ffmpeg', '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
             '-f', 'pulse', '-i', 'default',
             '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '4000k',
-            '-pix_fmt', 'yuv420p',
-            '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
+            '-pix_fmt', 'yuv420p', '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
