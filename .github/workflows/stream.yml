@@ -1,10 +1,10 @@
-name: 12H Stream
+name: 12H Final Stream
 
 on:
   workflow_dispatch:
     inputs:
       run_count:
-        description: 'Run count'
+        description: 'Current Round'
         default: '1'
         required: false
 
@@ -12,24 +12,27 @@ jobs:
   live:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install System Deps
+      - name: Setup Environment
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg pulseaudio
+          # PulseAudio setup
           pulseaudio -D --exit-idle-time=-1
           pacmd load-module module-virtual-sink sink_name=vss
           pacmd set-default-sink vss
-          Xvfb :99 -screen 0 1920x1080x24 &
+          # Display setup for visuals
+          Xvfb :99 -screen 0 1920x1080x24 +extension GLX +render -noreset &
+          sleep 5
 
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Run Script
+      - name: Start Bot
         env:
           YT_STREAM_KEY: ${{ secrets.YT_STREAM_KEY }}
           DISPLAY: :99
@@ -37,20 +40,19 @@ jobs:
           pip install selenium webdriver-manager
           python streamyard_bot.py
 
-      - name: Restart Round
+      - name: 12H Limit Logic
         if: always()
         run: |
-          # Default to 1 if input is empty
-          CURRENT_RUN=${{ github.event.inputs.run_count }}
-          if [ -z "$CURRENT_RUN" ]; then CURRENT_RUN=1; fi
+          RUN_COUNT=${{ github.event.inputs.run_count }}
+          if [ -z "$RUN_COUNT" ]; then RUN_COUNT=1; fi
           
-          if [ "$CURRENT_RUN" -eq "1" ]; then
-            echo "Round 1 finished. Triggering Round 2..."
+          if [ "$RUN_COUNT" -eq "1" ]; then
+            echo "Round 1 complete. Restarting for final 6 hours..."
             curl -X POST -H "Authorization: token ${{ secrets.GH_PAT }}" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/actions/workflows/stream.yml/dispatches \
             -d '{"ref":"main", "inputs": {"run_count": "2"}}'
           else
-            echo "12 Hours (Round 2) finished. Exit."
+            echo "12 Hours completed. Exiting."
           fi
           
