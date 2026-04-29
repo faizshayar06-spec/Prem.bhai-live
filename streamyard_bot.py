@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna link yahan dalein
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
@@ -16,11 +16,16 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # CRITICAL FLAGS: Permissions bypass karne ke liye
+    # Permissions Bypass (FORCE FLAGS)
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
-    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("prefs", {
+        "profile.default_content_setting_values.media_stream_mic": 1, 
+        "profile.default_content_setting_values.media_stream_camera": 1,
+        "profile.default_content_setting_values.notifications": 1
+    })
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -30,25 +35,27 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: All Buttons Bypass (Accept, Continue, Allow access)
+        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow)
         driver.execute_script("""
-            function clickByText(text) {
-                let btns = Array.from(document.querySelectorAll('button'));
-                let target = btns.find(el => el.textContent.includes(text));
-                if(target) {
-                    target.click();
-                    return true;
-                }
-                return false;
+            function clickAnything() {
+                // Saare buttons ko check karo jo blue ho sakte hain ya permissions maang rahe hain
+                let buttons = Array.from(document.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    let txt = btn.innerText.toLowerCase();
+                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                        btn.click();
+                        console.log('Clicked: ' + txt);
+                    }
+                });
             }
-            // Saare potential buttons ko click karne ki koshish
-            clickByText('Accept');
-            setTimeout(() => clickByText('Continue'), 2000);
-            setTimeout(() => clickByText('Allow mic/cam access'), 4000);
+            // 3 baar try karega intervals mein
+            clickAnything();
+            setTimeout(clickAnything, 3000);
+            setTimeout(clickAnything, 6000);
         """)
-        time.sleep(8)
+        time.sleep(10)
 
-        # STEP 2: Name Entry & Enter Studio
+        # STEP 2: NAME ENTRY & ENTER STUDIO
         driver.execute_script("""
             let nameInput = document.querySelector('input[placeholder*="name"]') || document.querySelector('input');
             if(nameInput) {
@@ -60,37 +67,35 @@ def start_stream():
                     el.textContent.includes('Enter') || el.textContent.includes('Check')
                 );
                 if(enterBtn) enterBtn.click();
-            }, 2000);
+            }, 3000);
         """)
         
-        print("Finalizing entry...")
-        time.sleep(20)
+        print("Final Studio Entry Attempt...")
+        time.sleep(25) # Studio load hone ka wait
 
-        # STEP 3: Auto Add to Stage
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
                 let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
-                let removeBtn = btns.find(b => b.innerText.includes('Remove'));
-                if (addBtn && !removeBtn) {
+                if (addBtn) {
                     addBtn.click();
                 }
             }, 5000);
         """)
 
-        # STEP 4: FFmpeg Streaming
+        # FFmpeg
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
             '-f', 'pulse', '-i', 'default',
             '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '4000k',
-            '-pix_fmt', 'yuv420p', '-g', '60',
-            '-c:a', 'aac', '-b:a', '128k', '-ar', '44100',
+            '-pix_fmt', 'yuv420p',
             '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Live logic running...")
+        print("Bot is doing its job. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
