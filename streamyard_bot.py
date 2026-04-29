@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna asli link yahan dalein
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna link yahan dalein
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
@@ -24,23 +24,27 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(12) # Cookies popup aane ka wait
+        time.sleep(10)
 
-        # FIX: COOKIES ACCEPT LOGIC
+        # STEP 1: Continue / Cookie Bypass
+        # Yeh script 'Continue' ya 'Accept' buttons ko click karegi
         driver.execute_script("""
-            let cookieBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Accept all cookies') || 
-                el.textContent.includes('Accept') || 
-                el.textContent.includes('Got it')
-            );
-            if(cookieBtn) {
-                cookieBtn.click();
-                console.log('Cookies Accepted!');
+            function clickButton(text) {
+                let btn = Array.from(document.querySelectorAll('button')).find(el => 
+                    el.textContent.includes(text)
+                );
+                if(btn) {
+                    btn.click();
+                    return true;
+                }
+                return false;
             }
+            clickButton('Accept');
+            setTimeout(() => clickButton('Continue'), 2000);
         """)
-        time.sleep(3)
+        time.sleep(5)
 
-        # NAME ENTRY & ENTER
+        # STEP 2: Name Entry & Enter Studio
         driver.execute_script("""
             let nameInput = document.querySelector('input[placeholder*="name"]') || document.querySelector('input');
             if(nameInput) {
@@ -55,10 +59,10 @@ def start_stream():
             }, 2000);
         """)
         
-        print("Studio loading...")
+        print("Studio Entry Triggered...")
         time.sleep(20)
 
-        # AUTO-ADD TO STAGE
+        # STEP 3: Auto Add to Stage
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -70,6 +74,7 @@ def start_stream():
             }, 5000);
         """)
 
+        # STEP 4: FFmpeg Streaming
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -81,6 +86,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
+        print("Live on YouTube! Round starting...")
         time.sleep(21300) 
         process.terminate()
 
