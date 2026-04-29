@@ -24,11 +24,11 @@ def start_stream():
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("Opening StreamYard... Force Mode ON")
+        print("Bot Started. Jalwa dikhane ka time...")
         driver.get(GUEST_URL)
         time.sleep(12)
 
-        # STEP 1: BYPASS INITIAL (In case Cookies or Continue appears)
+        # STEP 1: COOKIES & INITIAL BYPASS
         driver.execute_script("""
             let btns = Array.from(document.querySelectorAll('button'));
             btns.forEach(btn => {
@@ -40,64 +40,68 @@ def start_stream():
         """)
         time.sleep(8)
 
-        # STEP 2: FORCEFUL NAME ENTRY (Jalwa logic)
-        print("Step 2: Forcefully entering name 'Faiz'...")
+        # STEP 2: FORCEFUL NAME ENTRY (Faiz)
+        print("Step 2: Naam likh raha hoon forcefully...")
         driver.execute_script("""
-            let nameField = document.querySelector('input[name="displayName"]') || 
-                            document.querySelector('input[placeholder*="name"]') || 
-                            document.querySelector('input');
-            
-            if(nameField) {
-                // Focus aur Value forcefully set karna
-                nameField.focus();
-                nameField.value = 'Faiz';
-                
-                // StreamYard ko trigger dena ki typing hui hai
-                nameField.dispatchEvent(new Event('input', { bubbles: true }));
-                nameField.dispatchEvent(new Event('change', { bubbles: true }));
-                nameField.dispatchEvent(new Event('blur', { bubbles: true }));
-                console.log('Forceful Name Fill Done');
+            let input = document.querySelector('input[name="displayName"]') || document.querySelector('input');
+            if(input) {
+                input.focus();
+                input.value = 'Faiz';
+                // Events trigger karna taaki StreamYard ko pata chale naam likha gaya hai
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
             }
         """)
         time.sleep(3)
 
-        # STEP 3: FORCEFUL ENTER STUDIO CLICK
-        print("Step 3: Force-clicking Enter Studio...")
+        # STEP 3: COORDINATE GAME (The Real Hit)
+        print("Step 3: Coordinates nikal kar Enter Studio par click kar raha hoon...")
         driver.execute_script("""
-            let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+            let btn = Array.from(document.querySelectorAll('button')).find(el => 
                 el.textContent.includes('Enter studio')
             );
-            if(enterBtn) {
-                // Button ko forcefully enable karke click karna
-                enterBtn.disabled = false;
-                enterBtn.click();
-                console.log('Force Entry Clicked');
+            if(btn) {
+                btn.disabled = false; // Agar button disable ho toh enable karo
+                let rect = btn.getBoundingClientRect();
+                let x = rect.left + rect.width / 2;
+                let y = rect.top + rect.height / 2;
+                
+                // Mouse coordinates par forceful click
+                let clickEvent = new MouseEvent('click', {
+                    'view': window,
+                    'bubbles': true,
+                    'cancelable': true,
+                    'clientX': x,
+                    'clientY': y
+                });
+                btn.dispatchEvent(clickEvent);
+                console.log('Force Clicked at: ' + x + ',' + y);
             }
         """)
         
-        # Backup: Agar JS click fail hua toh Selenium se Enter press karna
+        # Backup: Selenium wala Enter key
         try:
             name_field = driver.find_element(By.TAG_NAME, "input")
             name_field.send_keys(Keys.ENTER)
+            print("Backup Enter Key Pressed.")
         except:
             pass
 
         print("Waiting for Studio load...")
         time.sleep(25) 
 
-        # STEP 4: AUTO-ADD TO STAGE (Background loop)
+        # STEP 4: AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
                 let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
-                let removeBtn = btns.find(b => b.innerText.includes('Remove'));
-                if (addBtn && !removeBtn) {
+                if (addBtn) {
                     addBtn.click();
                 }
             }, 5000);
         """)
 
-        # FFmpeg Start
+        # FFmpeg
         ffmpeg_cmd = [
             'ffmpeg', '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
             '-f', 'pulse', '-i', 'default',
@@ -106,12 +110,11 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Streaming is active. Check YouTube!")
         time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
-        print(f"Main Error: {e}")
+        print(f"Error: {e}")
     finally:
         driver.quit()
 
