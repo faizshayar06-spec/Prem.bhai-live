@@ -15,7 +15,11 @@ def start_stream():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
+    
+    # CRITICAL FLAGS: Permissions bypass karne ke liye
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
+    chrome_options.add_argument("--use-fake-device-for-media-stream")
+    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
     chrome_options.add_argument("--disable-gpu")
 
     service = Service(ChromeDriverManager().install())
@@ -26,23 +30,23 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: Continue / Cookie Bypass
-        # Yeh script 'Continue' ya 'Accept' buttons ko click karegi
+        # STEP 1: All Buttons Bypass (Accept, Continue, Allow access)
         driver.execute_script("""
-            function clickButton(text) {
-                let btn = Array.from(document.querySelectorAll('button')).find(el => 
-                    el.textContent.includes(text)
-                );
-                if(btn) {
-                    btn.click();
+            function clickByText(text) {
+                let btns = Array.from(document.querySelectorAll('button'));
+                let target = btns.find(el => el.textContent.includes(text));
+                if(target) {
+                    target.click();
                     return true;
                 }
                 return false;
             }
-            clickButton('Accept');
-            setTimeout(() => clickButton('Continue'), 2000);
+            // Saare potential buttons ko click karne ki koshish
+            clickByText('Accept');
+            setTimeout(() => clickByText('Continue'), 2000);
+            setTimeout(() => clickByText('Allow mic/cam access'), 4000);
         """)
-        time.sleep(5)
+        time.sleep(8)
 
         # STEP 2: Name Entry & Enter Studio
         driver.execute_script("""
@@ -59,7 +63,7 @@ def start_stream():
             }, 2000);
         """)
         
-        print("Studio Entry Triggered...")
+        print("Finalizing entry...")
         time.sleep(20)
 
         # STEP 3: Auto Add to Stage
@@ -86,7 +90,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Live on YouTube! Round starting...")
+        print("Live logic running...")
         time.sleep(21300) 
         process.terminate()
 
