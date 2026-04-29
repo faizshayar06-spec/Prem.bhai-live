@@ -7,19 +7,16 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-# Apna Guest Link yahan dalein
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
+GUEST_URL = "https://streamyard.com/3r8zzr4cbk" # Apna asli link yahan dalein
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
     chrome_options = Options()
-    # Visuals fix karne ke liye flags
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument("--hide-scrollbars")
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -27,25 +24,41 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(10)
+        time.sleep(12) # Cookies popup aane ka wait
 
-        # Name Entry aur Join Logic
+        # FIX: COOKIES ACCEPT LOGIC
         driver.execute_script("""
-            let input = document.querySelector('input');
-            if(input) {
-                input.value = 'Live_Bot';
-                input.dispatchEvent(new Event('input', { bubbles: true }));
+            let cookieBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Accept all cookies') || 
+                el.textContent.includes('Accept') || 
+                el.textContent.includes('Got it')
+            );
+            if(cookieBtn) {
+                cookieBtn.click();
+                console.log('Cookies Accepted!');
+            }
+        """)
+        time.sleep(3)
+
+        # NAME ENTRY & ENTER
+        driver.execute_script("""
+            let nameInput = document.querySelector('input[placeholder*="name"]') || document.querySelector('input');
+            if(nameInput) {
+                nameInput.value = 'فیض'; 
+                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
             }
             setTimeout(() => {
-                let btn = Array.from(document.querySelectorAll('button')).find(el => el.textContent.includes('Enter'));
-                if(btn) btn.click();
+                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                    el.textContent.includes('Enter') || el.textContent.includes('Check')
+                );
+                if(enterBtn) enterBtn.click();
             }, 2000);
         """)
         
         print("Studio loading...")
         time.sleep(20)
 
-        # Stage par add hone ka loop
+        # AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -57,7 +70,6 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg Command: Audio aur Video dono capture karega
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -69,14 +81,11 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Live on YouTube! Round starting...")
-        
-        # 5 hours 55 minutes ka timer
         time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"Error: {e}")
     finally:
         driver.quit()
 
