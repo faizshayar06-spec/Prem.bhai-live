@@ -24,12 +24,12 @@ def start_stream():
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("Bot Started. Jalwa loading...")
+        print("Bot Restarted. Step-by-step logic running...")
         driver.get(GUEST_URL)
-        time.sleep(10)
+        time.sleep(12)
 
-        # STEP 1: COOKIES HATAO (Java Logic)
-        print("Step 1: Cookies saaf kar raha hoon...")
+        # STEP 1: COOKIES HATAO (Sirf agar 'Accept' button dikhe tabhi)
+        print("Step 1: Cookies handle kar raha hoon...")
         driver.execute_script("""
             let cookieBtn = Array.from(document.querySelectorAll('button')).find(el => 
                 el.textContent.includes('Accept all cookies') || el.textContent.includes('Accept')
@@ -38,39 +38,53 @@ def start_stream():
         """)
         time.sleep(5)
 
-        # STEP 2: NAAM LIKHO (Human Typing Simulation)
-        print("Step 2: Naam 'Faiz' likh raha hoon...")
+        # STEP 2: WELCOME CONTINUE (Screenshot wala Blue Button)
+        print("Step 2: Clicking Continue...")
+        driver.execute_script("""
+            let continueBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Continue')
+            );
+            if(continueBtn) continueBtn.click();
+        """)
+        time.sleep(8)
+
+        # STEP 3: MIC/CAM ALLOW (Agar page aaye tabhi)
+        print("Step 3: Clicking Allow Access...")
+        driver.execute_script("""
+            let allowBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Allow mic/cam access')
+            );
+            if(allowBtn) allowBtn.click();
+        """)
+        time.sleep(10)
+
+        # STEP 4: NAME ENTRY (English Name: Faiz)
+        print("Step 4: Typing Name...")
         try:
-            # Sahi field ko target karna
-            name_field = driver.find_element(By.NAME, "displayName")
+            name_field = driver.find_element(By.CSS_SELECTOR, 'input[name="displayName"]') or \
+                         driver.find_element(By.TAG_NAME, 'input')
             name_field.click()
             time.sleep(1)
-            
-            for char in "Faiz":
-                name_field.send_keys(char)
-                time.sleep(0.5) # Slow typing taaki error na aaye
-            
-            print("Naam likh diya.")
-        except Exception as e:
-            print("Selenium fail, JS se naam bhar raha hoon...")
+            name_field.send_keys("Faiz")
+            time.sleep(2)
+            name_field.send_keys(Keys.ENTER)
+            print("Name Entered via Keys.")
+        except:
+            # Backup JS for Name
             driver.execute_script("document.querySelector('input').value = 'Faiz';")
             driver.execute_script("document.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));")
+            time.sleep(2)
+            driver.execute_script("""
+                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                    el.textContent.includes('Enter studio')
+                );
+                if(enterBtn) enterBtn.click();
+            """)
 
-        time.sleep(3)
-
-        # STEP 3: ENTER STUDIO (Final Hit)
-        print("Step 3: Studio mein entry maar raha hoon...")
-        driver.execute_script("""
-            let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Enter studio')
-            );
-            if(enterBtn) enterBtn.click();
-        """)
-        
-        print("Waiting for Studio load...")
+        print("Entering Studio...")
         time.sleep(25) 
 
-        # STEP 4: AUTO-ADD TO STAGE
+        # STEP 5: AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -82,7 +96,7 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg Signal
+        # FFmpeg
         ffmpeg_cmd = [
             'ffmpeg', '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
             '-f', 'pulse', '-i', 'default',
@@ -95,7 +109,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Main Error: {e}")
     finally:
         driver.quit()
 
