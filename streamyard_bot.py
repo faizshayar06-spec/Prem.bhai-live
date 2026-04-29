@@ -24,67 +24,68 @@ def start_stream():
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("Bot Restarted. Step-by-step logic running...")
+        print("Opening StreamYard... Force Mode ON")
         driver.get(GUEST_URL)
         time.sleep(12)
 
-        # STEP 1: COOKIES HATAO (Sirf agar 'Accept' button dikhe tabhi)
-        print("Step 1: Cookies handle kar raha hoon...")
+        # STEP 1: BYPASS INITIAL (In case Cookies or Continue appears)
         driver.execute_script("""
-            let cookieBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Accept all cookies') || el.textContent.includes('Accept')
-            );
-            if(cookieBtn) cookieBtn.click();
-        """)
-        time.sleep(5)
-
-        # STEP 2: WELCOME CONTINUE (Screenshot wala Blue Button)
-        print("Step 2: Clicking Continue...")
-        driver.execute_script("""
-            let continueBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Continue')
-            );
-            if(continueBtn) continueBtn.click();
+            let btns = Array.from(document.querySelectorAll('button'));
+            btns.forEach(btn => {
+                let txt = btn.innerText.toLowerCase();
+                if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow')) {
+                    btn.click();
+                }
+            });
         """)
         time.sleep(8)
 
-        # STEP 3: MIC/CAM ALLOW (Agar page aaye tabhi)
-        print("Step 3: Clicking Allow Access...")
+        # STEP 2: FORCEFUL NAME ENTRY (Jalwa logic)
+        print("Step 2: Forcefully entering name 'Faiz'...")
         driver.execute_script("""
-            let allowBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Allow mic/cam access')
-            );
-            if(allowBtn) allowBtn.click();
+            let nameField = document.querySelector('input[name="displayName"]') || 
+                            document.querySelector('input[placeholder*="name"]') || 
+                            document.querySelector('input');
+            
+            if(nameField) {
+                // Focus aur Value forcefully set karna
+                nameField.focus();
+                nameField.value = 'Faiz';
+                
+                // StreamYard ko trigger dena ki typing hui hai
+                nameField.dispatchEvent(new Event('input', { bubbles: true }));
+                nameField.dispatchEvent(new Event('change', { bubbles: true }));
+                nameField.dispatchEvent(new Event('blur', { bubbles: true }));
+                console.log('Forceful Name Fill Done');
+            }
         """)
-        time.sleep(10)
+        time.sleep(3)
 
-        # STEP 4: NAME ENTRY (English Name: Faiz)
-        print("Step 4: Typing Name...")
+        # STEP 3: FORCEFUL ENTER STUDIO CLICK
+        print("Step 3: Force-clicking Enter Studio...")
+        driver.execute_script("""
+            let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Enter studio')
+            );
+            if(enterBtn) {
+                // Button ko forcefully enable karke click karna
+                enterBtn.disabled = false;
+                enterBtn.click();
+                console.log('Force Entry Clicked');
+            }
+        """)
+        
+        # Backup: Agar JS click fail hua toh Selenium se Enter press karna
         try:
-            name_field = driver.find_element(By.CSS_SELECTOR, 'input[name="displayName"]') or \
-                         driver.find_element(By.TAG_NAME, 'input')
-            name_field.click()
-            time.sleep(1)
-            name_field.send_keys("Faiz")
-            time.sleep(2)
+            name_field = driver.find_element(By.TAG_NAME, "input")
             name_field.send_keys(Keys.ENTER)
-            print("Name Entered via Keys.")
         except:
-            # Backup JS for Name
-            driver.execute_script("document.querySelector('input').value = 'Faiz';")
-            driver.execute_script("document.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));")
-            time.sleep(2)
-            driver.execute_script("""
-                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                    el.textContent.includes('Enter studio')
-                );
-                if(enterBtn) enterBtn.click();
-            """)
+            pass
 
-        print("Entering Studio...")
+        print("Waiting for Studio load...")
         time.sleep(25) 
 
-        # STEP 5: AUTO-ADD TO STAGE
+        # STEP 4: AUTO-ADD TO STAGE (Background loop)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -96,7 +97,7 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg
+        # FFmpeg Start
         ffmpeg_cmd = [
             'ffmpeg', '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
             '-f', 'pulse', '-i', 'default',
@@ -105,6 +106,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
+        print("Streaming is active. Check YouTube!")
         time.sleep(21300) 
         process.terminate()
 
