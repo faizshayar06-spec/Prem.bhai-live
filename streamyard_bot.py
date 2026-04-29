@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 # --- CONFIG ---
 GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
@@ -19,105 +20,74 @@ def start_stream():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
-
+    # Agar server pe ho toh screen setup zaroori hai
+    
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    actions = ActionChains(driver)
     
     try:
-        print("Bot Started. Jalwa dikhane ka time...")
+        print("Bot Restarted...")
         driver.get(GUEST_URL)
         time.sleep(12)
 
-        # STEP 1: COOKIES & INITIAL BYPASS
+        # STEP 1 & 2: Cookies aur Continue (JS handles this well)
         driver.execute_script("""
             let btns = Array.from(document.querySelectorAll('button'));
-            btns.forEach(btn => {
-                let txt = btn.innerText.toLowerCase();
-                if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow')) {
-                    btn.click();
-                }
-            });
+            let cb = btns.find(el => el.innerText.includes('Accept') || el.innerText.includes('Continue'));
+            if(cb) cb.click();
         """)
-        time.sleep(8)
+        time.sleep(10)
 
-        # STEP 2: FORCEFUL NAME ENTRY (Faiz)
-        print("Step 2: Naam likh raha hoon forcefully...")
-        driver.execute_script("""
-            let input = document.querySelector('input[name="displayName"]') || document.querySelector('input');
-            if(input) {
-                input.focus();
-                input.value = 'Faiz';
-                // Events trigger karna taaki StreamYard ko pata chale naam likha gaya hai
-                input.dispatchEvent(new Event('input', { bubbles: true }));
-                input.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        """)
-        time.sleep(3)
-
-        # STEP 3: COORDINATE GAME (The Real Hit)
-        print("Step 3: Coordinates nikal kar Enter Studio par click kar raha hoon...")
-        driver.execute_script("""
-            let btn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Enter studio')
-            );
-            if(btn) {
-                btn.disabled = false; // Agar button disable ho toh enable karo
-                let rect = btn.getBoundingClientRect();
-                let x = rect.left + rect.width / 2;
-                let y = rect.top + rect.height / 2;
-                
-                // Mouse coordinates par forceful click
-                let clickEvent = new MouseEvent('click', {
-                    'view': window,
-                    'bubbles': true,
-                    'cancelable': true,
-                    'clientX': x,
-                    'clientY': y
-                });
-                btn.dispatchEvent(clickEvent);
-                console.log('Force Clicked at: ' + x + ',' + y);
-            }
-        """)
+        # STEP 4: COORDINATE BASED CLICK & TYPE
+        print("Step 4: Finding Name field position and typing...")
         
-        # Backup: Selenium wala Enter key
         try:
-            name_field = driver.find_element(By.TAG_NAME, "input")
-            name_field.send_keys(Keys.ENTER)
-            print("Backup Enter Key Pressed.")
-        except:
-            pass
+            # Name field dhoondo
+            name_field = driver.find_element(By.CSS_SELECTOR, 'input[name="displayName"]')
+            
+            # ActionChains se element ke center pe move karo aur click karo
+            # Ye JS injection se zyada "Human-like" hai
+            actions.move_to_element(name_field).click().perform()
+            time.sleep(1)
+            
+            # Type name character by character
+            for char in "Faiz":
+                actions.send_keys(char).perform()
+                time.sleep(0.2)
+            
+            time.sleep(1)
+            actions.send_keys(Keys.ENTER).perform()
+            print("Name Entered via ActionChains.")
+            
+        except Exception as e:
+            print(f"ActionChains failed: {e}. Trying absolute coordinates backup...")
+            # Backup: Agar aap display 0 ya 99 par hain, toh input field 
+            # StreamYard mein lagbhag screen ke center mein hoti hai.
+            # coordinates: x=960, y=600 (approx for 1080p)
+            actions.move_by_offset(960, 550).click().perform() 
+            time.sleep(1)
+            actions.send_keys("Faiz").send_keys(Keys.ENTER).perform()
 
-        print("Waiting for Studio load...")
-        time.sleep(25) 
+        print("Entering Studio...")
+        time.sleep(20) 
 
-        # STEP 4: AUTO-ADD TO STAGE
+        # STEP 5: AUTO-ADD TO STAGE (Running in background)
         driver.execute_script("""
-            setInterval(() => {
-                let btns = Array.from(document.querySelectorAll('button'));
-                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
-                if (addBtn) {
-                    addBtn.click();
-                }
+            window.stageInterval = setInterval(() => {
+                let addBtn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Add to stage'));
+                if (addBtn) addBtn.click();
             }, 5000);
         """)
 
-        # FFmpeg
-        ffmpeg_cmd = [
-            'ffmpeg', '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
-            '-f', 'pulse', '-i', 'default',
-            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '4000k',
-            '-pix_fmt', 'yuv420p', '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
-        ]
-        
-        process = subprocess.Popen(ffmpeg_cmd)
-        time.sleep(21300) 
-        process.terminate()
+        # FFmpeg process...
+        # ... (rest of your ffmpeg code)
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Main Error: {e}")
     finally:
-        driver.quit()
+        # driver.quit() # Testing ke waqt band mat karo check karne ke liye
+        pass
 
 if __name__ == "__main__":
     start_stream()
-    
