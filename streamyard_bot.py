@@ -19,7 +19,7 @@ def start_stream():
     chrome_options.add_argument("--window-size=1920,1080")
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -27,57 +27,57 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(12)
+        time.sleep(10)
 
-        # STEP 1: INITIAL POPUPS BYPASS
+        # SEQUENCE 1: Cookies / Continue
+        print("Step 1: Handling Initial Buttons...")
         driver.execute_script("""
             let btns = Array.from(document.querySelectorAll('button'));
-            btns.forEach(btn => {
-                let txt = btn.innerText.toLowerCase();
-                if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow')) {
-                    btn.click();
-                }
-            });
+            let initialBtn = btns.find(el => el.textContent.includes('Accept') || el.textContent.includes('Continue'));
+            if(initialBtn) initialBtn.click();
+        """)
+        time.sleep(5)
+
+        # SEQUENCE 2: Allow Mic/Cam Access
+        print("Step 2: Clicking Allow Mic/Cam...")
+        driver.execute_script("""
+            let allowBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                el.textContent.includes('Allow mic/cam access')
+            );
+            if(allowBtn) allowBtn.click();
         """)
         time.sleep(8)
 
-        # STEP 2: HUMAN-LIKE NAME ENTRY (Error Fix)
-        print("Entering name...")
+        # SEQUENCE 3: Human-Like Name Entry
+        print("Step 3: Entering Name...")
         try:
-            # Sahi input box dhoondna
-            name_field = driver.find_element(By.CSS_SELECTOR, 'input[name="displayName"]') or \
-                         driver.find_element(By.TAG_NAME, 'input')
-            
-            name_field.click() # Pehle click karo
+            # Display name field ko target karna
+            name_field = driver.find_element(By.NAME, "displayName")
+            name_field.click()
             time.sleep(1)
             
-            # Ek-ek karke type karna (Simulation)
             bot_name = "فیض"
             for char in bot_name:
                 name_field.send_keys(char)
-                time.sleep(0.2)
+                time.sleep(0.3)
             
-            name_field.send_keys(Keys.ENTER) # Keyboard wala Enter button
-            print("Name entered and Enter key pressed.")
-
-        except Exception as e:
-            print(f"Name Entry Field not found by Selenium, trying JS backup...")
+            print("Name Typed. Pressing Enter...")
+            name_field.send_keys(Keys.ENTER)
+        except:
+            print("Name field issue, using backup click...")
             driver.execute_script("document.querySelector('input').value = 'فیض';")
-            driver.execute_script("document.querySelector('input').dispatchEvent(new Event('input', { bubbles: true }));")
-
-        # STEP 3: STUDIO ENTRY BUTTON (Backup Click)
-        time.sleep(3)
-        driver.execute_script("""
-            let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                el.textContent.includes('Enter studio')
-            );
-            if(enterBtn) enterBtn.click();
-        """)
+            time.sleep(2)
+            driver.execute_script("""
+                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                    el.textContent.includes('Enter studio')
+                );
+                if(enterBtn) enterBtn.click();
+            """)
         
-        print("Entering Studio...")
-        time.sleep(25) 
+        time.sleep(20) # Studio load hone ka wait
 
-        # STEP 4: AUTO-ADD TO STAGE LOOP
+        # SEQUENCE 4: Auto-Add to Stage (Only after entering studio)
+        print("Step 4: Bot is in Studio. Stage loop active.")
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -104,7 +104,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Main Error: {e}")
+        print(f"Error: {e}")
     finally:
         driver.quit()
 
