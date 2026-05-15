@@ -1,4 +1,4 @@
-name: 6-Hour Clean Stream
+name: Fixed 6H Stream
 
 on:
   workflow_dispatch:
@@ -8,31 +8,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4 # Latest version used
+        uses: actions/checkout@v4
 
-      - name: System Setup
+      - name: Install Display/Audio Fixes
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb ffmpeg pulseaudio fluxbox
-          # Setup Audio
+          # Audio Setup
           pulseaudio -D --exit-idle-time=-1
           pacmd load-module module-virtual-sink sink_name=vss
           pacmd set-default-sink vss
-          # Setup Screen
+          # Display Setup (:99)
           Xvfb :99 -screen 0 1920x1080x24 &
-          sleep 5
+          sleep 3
+          # Start Window Manager to prevent black screen
+          export DISPLAY=:99
+          fluxbox &
+          sleep 2
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install Selenium
-        run: pip install selenium webdriver-manager
-
-      - name: Run 6H Stream
+      - name: Run Bot
         env:
           YT_STREAM_KEY: ${{ secrets.YT_STREAM_KEY }}
           DISPLAY: :99
-        run: python streamyard_bot.py
-        
+        run: |
+          pip install selenium webdriver-manager
+          python streamyard_bot.py
+          
