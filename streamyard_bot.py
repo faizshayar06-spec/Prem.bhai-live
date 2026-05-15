@@ -16,7 +16,7 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Permissions Bypass
+    # Force bypass permissions
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
 
@@ -27,44 +27,54 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(12) 
 
-        print("🚀 Step: Clicking Continue and Entering Name...")
+        print("🚀 Step: Bypassing Cookies and Mic Access...")
         driver.execute_script("""
-            function solveStreamyard() {
-                // 1. Continue Button ko click karna (Jo screenshot mein dikh raha hai)
+            function superBypass() {
                 let btns = Array.from(document.querySelectorAll('button'));
-                let continueBtn = btns.find(b => b.innerText.includes('Continue'));
-                if(continueBtn) {
-                    continueBtn.click();
-                    console.log('✅ Continue Clicked');
+
+                // 1. Pehle Cookies 'Accept' karo
+                let cookieBtn = btns.find(b => b.innerText.includes('Accept all cookies') || b.innerText.includes('Accept'));
+                if(cookieBtn) {
+                    cookieBtn.click();
+                    console.log('✅ Cookies Accepted');
                 }
 
-                // 2. 4 second wait karna taaki naam wala box aa jaye
+                // 2. 2 second baad 'Allow mic/cam access' click karo
                 setTimeout(() => {
-                    let nameField = document.querySelector('input[name="displayName"], input#display-name');
-                    if(nameField) {
-                        nameField.value = 'Faiz-Live';
-                        nameField.dispatchEvent(new Event('input', { bubbles: true }));
-                        console.log('✅ Name Entered');
+                    let reloadedBtns = Array.from(document.querySelectorAll('button'));
+                    let micBtn = reloadedBtns.find(b => b.innerText.toLowerCase().includes('allow') || b.innerText.toLowerCase().includes('access'));
+                    if(micBtn) {
+                        micBtn.click();
+                        console.log('✅ Mic/Cam Access Clicked');
                     }
 
-                    // 3. Last Step: Enter Studio button dabana
+                    // 3. 4 second baad naam likh kar final enter karo
                     setTimeout(() => {
-                        let finalBtns = Array.from(document.querySelectorAll('button'));
-                        let enterBtn = finalBtns.find(b => 
-                            b.innerText.toLowerCase().includes('enter') || 
-                            b.innerText.toLowerCase().includes('studio')
-                        );
-                        if(enterBtn) {
-                            enterBtn.click();
-                            console.log('✅ Studio Entered!');
+                        let nameField = document.querySelector('input[name="displayName"], input#display-name');
+                        if(nameField) {
+                            nameField.value = 'Faiz-Live';
+                            nameField.dispatchEvent(new Event('input', { bubbles: true }));
+                            console.log('✅ Name Entered');
                         }
-                    }, 2500);
-                }, 4000);
+
+                        setTimeout(() => {
+                            let finalBtns = Array.from(document.querySelectorAll('button'));
+                            let enterBtn = finalBtns.find(b => 
+                                b.innerText.toLowerCase().includes('enter') || 
+                                b.innerText.toLowerCase().includes('studio')
+                            );
+                            if(enterBtn) {
+                                enterBtn.click();
+                                console.log('✅ Studio Entered!');
+                            }
+                        }, 2000);
+                    }, 4000);
+                }, 2000);
             }
-            solveStreamyard();
+            superBypass();
         """)
         
-        time.sleep(20) 
+        time.sleep(25) 
         print("🎬 Entry sequence finished. Starting FFmpeg...")
 
         # Stage Bot Loop
@@ -91,7 +101,7 @@ def start_stream():
     except Exception as e:
         print(f"❌ Error: {e}")
     finally:
-        driver.save_screenshot("after_continue.png")
+        driver.save_screenshot("bypass_check.png")
         driver.quit()
 
 if __name__ == "__main__":
