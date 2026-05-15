@@ -16,33 +16,29 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Bypass Mic/Cam and Popups
+    # Permissions Bypass
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
-    chrome_options.add_argument("--disable-notifications")
-    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
 
     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
     
     try:
         print("🌐 Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(15) 
+        time.sleep(12) 
 
-        # --- FULL BYPASS LOGIC ---
-        print("⌨️ Starting Bypass and Entry Process...")
+        print("🚀 Step: Clicking Continue and Entering Name...")
         driver.execute_script("""
-            function bypassEverything() {
-                // 1. Sabse pehle Cookies 'Accept' karo (Screenshoot mein yehi ruk raha hai)
-                let cookieBtn = Array.from(document.querySelectorAll('button')).find(b => 
-                    b.innerText.includes('Accept') || b.innerText.includes('cookies')
-                );
-                if(cookieBtn) {
-                    cookieBtn.click();
-                    console.log('✅ Cookies Accepted');
+            function solveStreamyard() {
+                // 1. Continue Button ko click karna (Jo screenshot mein dikh raha hai)
+                let btns = Array.from(document.querySelectorAll('button'));
+                let continueBtn = btns.find(b => b.innerText.includes('Continue'));
+                if(continueBtn) {
+                    continueBtn.click();
+                    console.log('✅ Continue Clicked');
                 }
 
-                // 2. 3 second baad naam bharna aur enter studio par click karna
+                // 2. 4 second wait karna taaki naam wala box aa jaye
                 setTimeout(() => {
                     let nameField = document.querySelector('input[name="displayName"], input#display-name');
                     if(nameField) {
@@ -51,25 +47,27 @@ def start_stream():
                         console.log('✅ Name Entered');
                     }
 
+                    // 3. Last Step: Enter Studio button dabana
                     setTimeout(() => {
-                        let enterBtn = Array.from(document.querySelectorAll('button')).find(b => 
+                        let finalBtns = Array.from(document.querySelectorAll('button'));
+                        let enterBtn = finalBtns.find(b => 
                             b.innerText.toLowerCase().includes('enter') || 
                             b.innerText.toLowerCase().includes('studio')
                         );
                         if(enterBtn) {
                             enterBtn.click();
-                            console.log('✅ Clicked Enter');
+                            console.log('✅ Studio Entered!');
                         }
-                    }, 2000);
-                }, 3000);
+                    }, 2500);
+                }, 4000);
             }
-            bypassEverything();
+            solveStreamyard();
         """)
         
-        time.sleep(20) # Wait for studio to load
-        print("🏁 Entry Process Done. Checking for Studio...")
+        time.sleep(20) 
+        print("🎬 Entry sequence finished. Starting FFmpeg...")
 
-        # Stage pe add karne ka loop
+        # Stage Bot Loop
         driver.execute_script("""
             setInterval(() => {
                 let addBtn = Array.from(document.querySelectorAll('button')).find(b => 
@@ -79,7 +77,7 @@ def start_stream():
             }, 10000);
         """)
 
-        # FFmpeg Start
+        # FFmpeg Stream
         ffmpeg_cmd = (
             f"ffmpeg -f x11grab -video_size 1920x1080 -framerate 30 -i :99.0 "
             f"-f pulse -i default -c:v libx264 -preset ultrafast -pix_fmt yuv420p "
@@ -93,7 +91,7 @@ def start_stream():
     except Exception as e:
         print(f"❌ Error: {e}")
     finally:
-        driver.save_screenshot("final_check.png")
+        driver.save_screenshot("after_continue.png")
         driver.quit()
 
 if __name__ == "__main__":
