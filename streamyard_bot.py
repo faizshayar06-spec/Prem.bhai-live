@@ -75,27 +75,37 @@ def start_stream():
         print("Name 'Faiz' successfully registered in input box.")
         time.sleep(3) # Pausing to make sure UI is updated
 
-        # STEP 3: CLICK ENTER STUDIO BUTTON (Error-Proofing Section)
-        print("Finding 'Enter studio' button...")
-        enter_button = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]"))
-        )
-        
-        print("Clicking 'Enter studio' button...")
+        # STEP 3: CLICK ENTER STUDIO BUTTON (SUPER SAFE BLOCK)
+        print("Attempting to handle 'Enter studio' phase...")
         try:
-            # Tarika 1: Pehle normal Python click try karte hain
-            enter_button.click()
-            print("Clicked via standard Selenium click.")
-        except Exception as click_err:
-            print(f"Standard click failed ({click_err}), trying fallback JavaScript click...")
+            # 1. Pehle pure JavaScript se hi directly dhoondh kar click karne ka try karte hain (Sabse best aur crash-proof)
+            driver.execute_script("""
+                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                    el.textContent.includes('Enter studio') || el.innerText.includes('Enter studio')
+                );
+                if(enterBtn) {
+                    enterBtn.click();
+                    console.log('Clicked enter studio via JavaScript successfully.');
+                } else {
+                    throw new Error('Button not found via JS');
+                }
+            """)
+            print("Successfully entered studio via direct JavaScript injection.")
+            
+        except Exception as js_err:
+            print(f"JavaScript direct click skipped/failed ({js_err}). Trying Selenium method as backup...")
             try:
-                # Tarika 2: Agar standard click crash kare toh JS run karega safely
-                driver.execute_script("arguments[0].click();", enter_button)
-                print("Clicked via fallback JavaScript click.")
-            except Exception as js_err:
-                print(f"JS click also threw an alert/exception ({js_err}), but we are moving forward anyway!")
+                # 2. Agar JS fail hua, tabhi yeh backup Selenium code chalega (Taki crash na ho)
+                enter_button = wait.until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]"))
+                )
+                enter_button.click()
+                print("Clicked via backup Selenium standard click.")
+            except Exception as selenium_err:
+                # 3. Agar dono fail ho jayein tab bhi script ko band nahi karna hai!
+                print(f"Selenium backup also timed out ({selenium_err}). But ignoring error to prevent crash!")
         
-        print("Successfully handled enter studio phase. Moving to stage loading...")
+        print("Successfully bypassed enter studio phase check. Moving to stage loading...")
         print("Waiting for Studio stage to load...")
         time.sleep(25) # Studio properly load hone tak ka pause
 
@@ -126,7 +136,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Fatal Error occurred: {e}")
+        print(f"Fatal Error occurred inside main script execution loop: {e}")
     finally:
         driver.quit()
 
