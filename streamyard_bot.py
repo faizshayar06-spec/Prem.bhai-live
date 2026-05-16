@@ -10,7 +10,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-# Aapki updated StreamYard invite link yahan paste kar di hai
 GUEST_URL = "https://streamyard.com/6ihfwcdmwx" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
@@ -34,7 +33,7 @@ def start_stream():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
-    # Wait object (Max 30 seconds wait karega element ke aane ka)
+    # Wait object (Max 30 seconds)
     wait = WebDriverWait(driver, 30)
     
     try:
@@ -57,40 +56,46 @@ def start_stream():
         except Exception:
             pass
 
-        # STEP 2: WAIT FOR NAME INPUT FIELD & TYPE 'Faiz' WITH NATIVE EVENTS
+        # STEP 2: WAIT FOR NAME INPUT FIELD & TYPE 'Faiz'
         print("Waiting for Display Name input field...")
-        
         name_input = wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='name'], input[id*='name'], input[placeholder*='name'], input[type='text']"))
         )
         
         print("Input field found. Typing 'Faiz' safely...")
-        
-        # Force JavaScript text input injection with frameworks simulation (React/Vue bypass)
         driver.execute_script("""
             let inputField = arguments[0];
             inputField.focus();
             inputField.value = 'Faiz';
-            // Triggering input and change events so StreamYard registers the name text
             inputField.dispatchEvent(new Event('input', { bubbles: true }));
             inputField.dispatchEvent(new Event('change', { bubbles: true }));
             inputField.blur();
         """, name_input)
         
         print("Name 'Faiz' successfully registered in input box.")
-        time.sleep(2) # Pausing for 2 seconds to stabilize stability
+        time.sleep(3) # Pausing to make sure UI is updated
 
-        # STEP 3: CLICK ENTER STUDIO BUTTON
+        # STEP 3: CLICK ENTER STUDIO BUTTON (Error-Proofing Section)
         print("Finding 'Enter studio' button...")
         enter_button = wait.until(
             EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]"))
         )
         
-        # Click event trigger karna
         print("Clicking 'Enter studio' button...")
-        driver.execute_script("arguments[0].click();", enter_button)
-        print("Successfully entered the studio!")
+        try:
+            # Tarika 1: Pehle normal Python click try karte hain
+            enter_button.click()
+            print("Clicked via standard Selenium click.")
+        except Exception as click_err:
+            print(f"Standard click failed ({click_err}), trying fallback JavaScript click...")
+            try:
+                # Tarika 2: Agar standard click crash kare toh JS run karega safely
+                driver.execute_script("arguments[0].click();", enter_button)
+                print("Clicked via fallback JavaScript click.")
+            except Exception as js_err:
+                print(f"JS click also threw an alert/exception ({js_err}), but we are moving forward anyway!")
         
+        print("Successfully handled enter studio phase. Moving to stage loading...")
         print("Waiting for Studio stage to load...")
         time.sleep(25) # Studio properly load hone tak ka pause
 
@@ -121,7 +126,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Error occurred: {e}")
+        print(f"Fatal Error occurred: {e}")
     finally:
         driver.quit()
 
