@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/invite/xxxxxxx" 
+GUEST_URL = "https://streamyard.com/6ihfwcdmwx" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
