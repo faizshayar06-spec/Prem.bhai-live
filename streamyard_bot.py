@@ -4,6 +4,9 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -30,50 +33,58 @@ def start_stream():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
+    # Wait object initialize kiya (Max 20 seconds wait karega)
+    wait = WebDriverWait(driver, 20)
+    
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow)
-        driver.execute_script("""
-            function clickAnything() {
-                // Saare buttons ko check karo jo blue ho sakte hain ya permissions maang rahe hain
+        # STEP 1: COOKIES / ACCEPT / ALLOW BUTTON HANDLING (Bypass)
+        print("Bypassing initial dialogs/cookies...")
+        try:
+            driver.execute_script("""
                 let buttons = Array.from(document.querySelectorAll('button'));
                 buttons.forEach(btn => {
                     let txt = btn.innerText.toLowerCase();
                     if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
                         btn.click();
-                        console.log('Clicked: ' + txt);
                     }
                 });
-            }
-            // 3 baar try karega intervals mein
-            clickAnything();
-            setTimeout(clickAnything, 3000);
-            setTimeout(clickAnything, 6000);
-        """)
-        time.sleep(10)
+            """)
+        except Exception:
+            pass # Agar koi button nahi mila toh code crash nahi hoga
 
-        # STEP 2: NAME ENTRY & ENTER STUDIO
-        driver.execute_script("""
-            let nameInput = document.querySelector('input[placeholder*="name"]') || document.querySelector('input');
-            if(nameInput) {
-                nameInput.value = 'فیض'; 
-                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            setTimeout(() => {
-                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                    el.textContent.includes('Enter') || el.textContent.includes('Check')
-                );
-                if(enterBtn) enterBtn.click();
-            }, 3000);
-        """)
+        # STEP 2: NAME ENTRY (FAIZ IN ENGLISH)
+        print("Finding Display Name input field...")
         
-        print("Final Studio Entry Attempt...")
-        time.sleep(25) # Studio load hone ka wait
+        # Name field ka wait karega aur select karega (Screenshot ke hisab se)
+        name_input = wait.until(
+            EC.presence_of_element_with_locator((By.CSS_SELECTOR, "input[name='name'], input[id*='name'], input[placeholder*='name'], input[type='text']"))
+        )
+        
+        # Click aur Clear karne ke baad text type karna (English mein 'Faiz')
+        name_input.click()
+        name_input.clear()
+        name_input.send_keys("Faiz")
+        print("Name 'Faiz' entered successfully.")
+        
+        time.sleep(2) # Stabilize karne ke liye chhota sa pause
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
+        # STEP 3: CLICK ENTER STUDIO BUTTON
+        print("Finding 'Enter studio' button...")
+        enter_button = wait.until(
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]"))
+        )
+        
+        # Click command send karna
+        enter_button.click()
+        print("Clicked 'Enter studio' successfully.")
+        
+        print("Waiting for Studio to load...")
+        time.sleep(25) # Studio properly load hone ke liye wait
+
+        # STEP 4: REPETITIVE AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -84,7 +95,7 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg
+        # FFmpeg Section
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -100,7 +111,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error occurred: {e}")
     finally:
         driver.quit()
 
