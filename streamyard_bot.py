@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
+# Aapki updated StreamYard invite link yahan paste kar di hai
 GUEST_URL = "https://streamyard.com/6ihfwcdmwx" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
@@ -33,15 +34,16 @@ def start_stream():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
-    # Wait object initialize kiya (Max 20 seconds wait karega)
-    wait = WebDriverWait(driver, 20)
+    # Wait object (Max 30 seconds wait karega element ke aane ka)
+    wait = WebDriverWait(driver, 30)
     
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
 
-        # STEP 1: COOKIES / ACCEPT / ALLOW BUTTON HANDLING (Bypass)
-        print("Bypassing initial dialogs/cookies...")
+        # STEP 1: INITIAL DIALOGS / COOKIES BYPASS
+        print("Bypassing initial dialogs/cookies if any...")
+        time.sleep(5)
         try:
             driver.execute_script("""
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -53,23 +55,30 @@ def start_stream():
                 });
             """)
         except Exception:
-            pass # Agar koi button nahi mila toh code crash nahi hoga
+            pass
 
-        # STEP 2: NAME ENTRY (FAIZ IN ENGLISH)
-        print("Finding Display Name input field...")
+        # STEP 2: WAIT FOR NAME INPUT FIELD & TYPE 'Faiz' WITH NATIVE EVENTS
+        print("Waiting for Display Name input field...")
         
-        # Name field ka wait karega aur select karega (Screenshot ke hisab se)
         name_input = wait.until(
-            EC.presence_of_element_with_locator((By.CSS_SELECTOR, "input[name='name'], input[id*='name'], input[placeholder*='name'], input[type='text']"))
+            EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='name'], input[id*='name'], input[placeholder*='name'], input[type='text']"))
         )
         
-        # Click aur Clear karne ke baad text type karna (English mein 'Faiz')
-        name_input.click()
-        name_input.clear()
-        name_input.send_keys("Faiz")
-        print("Name 'Faiz' entered successfully.")
+        print("Input field found. Typing 'Faiz' safely...")
         
-        time.sleep(2) # Stabilize karne ke liye chhota sa pause
+        # Force JavaScript text input injection with frameworks simulation (React/Vue bypass)
+        driver.execute_script("""
+            let inputField = arguments[0];
+            inputField.focus();
+            inputField.value = 'Faiz';
+            // Triggering input and change events so StreamYard registers the name text
+            inputField.dispatchEvent(new Event('input', { bubbles: true }));
+            inputField.dispatchEvent(new Event('change', { bubbles: true }));
+            inputField.blur();
+        """, name_input)
+        
+        print("Name 'Faiz' successfully registered in input box.")
+        time.sleep(2) # Pausing for 2 seconds to stabilize stability
 
         # STEP 3: CLICK ENTER STUDIO BUTTON
         print("Finding 'Enter studio' button...")
@@ -77,12 +86,13 @@ def start_stream():
             EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]"))
         )
         
-        # Click command send karna
-        enter_button.click()
-        print("Clicked 'Enter studio' successfully.")
+        # Click event trigger karna
+        print("Clicking 'Enter studio' button...")
+        driver.execute_script("arguments[0].click();", enter_button)
+        print("Successfully entered the studio!")
         
-        print("Waiting for Studio to load...")
-        time.sleep(25) # Studio properly load hone ke liye wait
+        print("Waiting for Studio stage to load...")
+        time.sleep(25) # Studio properly load hone tak ka pause
 
         # STEP 4: REPETITIVE AUTO-ADD TO STAGE
         driver.execute_script("""
@@ -106,7 +116,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is doing its job. Check YouTube dashboard.")
+        print("Bot is successfully streaming. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
