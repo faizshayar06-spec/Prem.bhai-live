@@ -7,7 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/3r8zzr4cbk" 
+GUEST_URL = "https://streamyard.com/invite/xxxxxxx" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
@@ -16,92 +16,92 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Force bypass permissions
+    # Permissions Bypass (FORCE FLAGS)
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
+    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("prefs", {
+        "profile.default_content_setting_values.media_stream_mic": 1, 
+        "profile.default_content_setting_values.media_stream_camera": 1,
+        "profile.default_content_setting_values.notifications": 1
+    })
 
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("🌐 Opening StreamYard...")
+        print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(12) 
+        time.sleep(10)
 
-        print("🚀 Step: Bypassing Cookies and Mic Access...")
+        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow)
         driver.execute_script("""
-            function superBypass() {
-                let btns = Array.from(document.querySelectorAll('button'));
-
-                // 1. Pehle Cookies 'Accept' karo
-                let cookieBtn = btns.find(b => b.innerText.includes('Accept all cookies') || b.innerText.includes('Accept'));
-                if(cookieBtn) {
-                    cookieBtn.click();
-                    console.log('✅ Cookies Accepted');
-                }
-
-                // 2. 2 second baad 'Allow mic/cam access' click karo
-                setTimeout(() => {
-                    let reloadedBtns = Array.from(document.querySelectorAll('button'));
-                    let micBtn = reloadedBtns.find(b => b.innerText.toLowerCase().includes('allow') || b.innerText.toLowerCase().includes('access'));
-                    if(micBtn) {
-                        micBtn.click();
-                        console.log('✅ Mic/Cam Access Clicked');
+            function clickAnything() {
+                // Saare buttons ko check karo jo blue ho sakte hain ya permissions maang rahe hain
+                let buttons = Array.from(document.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    let txt = btn.innerText.toLowerCase();
+                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                        btn.click();
+                        console.log('Clicked: ' + txt);
                     }
-
-                    // 3. 4 second baad naam likh kar final enter karo
-                    setTimeout(() => {
-                        let nameField = document.querySelector('input[name="displayName"], input#display-name');
-                        if(nameField) {
-                            nameField.value = 'Faiz-Live';
-                            nameField.dispatchEvent(new Event('input', { bubbles: true }));
-                            console.log('✅ Name Entered');
-                        }
-
-                        setTimeout(() => {
-                            let finalBtns = Array.from(document.querySelectorAll('button'));
-                            let enterBtn = finalBtns.find(b => 
-                                b.innerText.toLowerCase().includes('enter') || 
-                                b.innerText.toLowerCase().includes('studio')
-                            );
-                            if(enterBtn) {
-                                enterBtn.click();
-                                console.log('✅ Studio Entered!');
-                            }
-                        }, 2000);
-                    }, 4000);
-                }, 2000);
+                });
             }
-            superBypass();
+            // 3 baar try karega intervals mein
+            clickAnything();
+            setTimeout(clickAnything, 3000);
+            setTimeout(clickAnything, 6000);
+        """)
+        time.sleep(10)
+
+        # STEP 2: NAME ENTRY & ENTER STUDIO
+        driver.execute_script("""
+            let nameInput = document.querySelector('input[placeholder*="name"]') || document.querySelector('input');
+            if(nameInput) {
+                nameInput.value = 'فیض'; 
+                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            setTimeout(() => {
+                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
+                    el.textContent.includes('Enter') || el.textContent.includes('Check')
+                );
+                if(enterBtn) enterBtn.click();
+            }, 3000);
         """)
         
-        time.sleep(25) 
-        print("🎬 Entry sequence finished. Starting FFmpeg...")
+        print("Final Studio Entry Attempt...")
+        time.sleep(25) # Studio load hone ka wait
 
-        # Stage Bot Loop
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
-                let addBtn = Array.from(document.querySelectorAll('button')).find(b => 
-                    b.innerText.toLowerCase().includes('add to stage')
-                );
-                if (addBtn) addBtn.click();
-            }, 10000);
+                let btns = Array.from(document.querySelectorAll('button'));
+                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
+                if (addBtn) {
+                    addBtn.click();
+                }
+            }, 5000);
         """)
 
-        # FFmpeg Stream
-        ffmpeg_cmd = (
-            f"ffmpeg -f x11grab -video_size 1920x1080 -framerate 30 -i :99.0 "
-            f"-f pulse -i default -c:v libx264 -preset ultrafast -pix_fmt yuv420p "
-            f"-maxrate 3000k -bufsize 6000k -g 60 -c:a aac -b:a 128k -f flv rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}"
-        )
+        # FFmpeg
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
+            '-f', 'pulse', '-i', 'default',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '4000k',
+            '-pix_fmt', 'yuv420p',
+            '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
+        ]
         
-        process = subprocess.Popen(ffmpeg_cmd, shell=True)
-        time.sleep(21500) # 6 Hours
+        process = subprocess.Popen(ffmpeg_cmd)
+        print("Bot is doing its job. Check YouTube dashboard.")
+        time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
     finally:
-        driver.save_screenshot("bypass_check.png")
         driver.quit()
 
 if __name__ == "__main__":
