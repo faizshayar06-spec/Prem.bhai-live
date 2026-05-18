@@ -33,70 +33,48 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(5)
+        time.sleep(10)
 
-        # SINGLE POWERFUL JAVASCRIPT MASTER LOOP TO CONTROL EVERYTHING
-        print("Starting JavaScript Master Engine...")
+        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
         driver.execute_script("""
-            let nameFilled = false;
-            let studioEntered = false;
-
-            let masterInterval = setInterval(() => {
-                // 1. Check karo kya Display Name ka input box screen par aa gaya hai?
-                let nameInput = document.getElementById('name') || 
-                                document.querySelector('input[placeholder*="name"]') || 
-                                document.querySelector('input[type="text"]');
-                
-                if (nameInput) {
-                    // Agar name box mil gaya aur abhi tak naam nahi bhara hai
-                    if (!nameFilled) {
-                        nameInput.focus();
-                        
-                        // React State compatibility trigger ke saath naam fill karna
-                        let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-                        nativeInputValueSetter.call(nameInput, 'Faiz');
-                        
-                        // React ko batane ke liye input events fire karna
-                        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        console.log('Name field forcefully filled with Faiz via React setter.');
-                        nameFilled = true;
-
-                        // Naam fill hone ke thik 2 seconds baad Enter Studio click hoga
-                        setTimeout(() => {
-                            let buttons = Array.from(document.querySelectorAll('button'));
-                            let enterBtn = buttons.find(el => 
-                                el.textContent.includes('Enter studio') || 
-                                el.textContent.includes('Enter') ||
-                                el.getAttribute('type') === 'submit'
-                            );
-                            
-                            if (enterBtn && !studioEntered) {
-                                enterBtn.click();
-                                console.log('Successfully Force Clicked Enter Studio!');
-                                studioEntered = true;
-                                clearInterval(masterInterval); // Kaam khatam, loop close!
-                            }
-                        }, 2000);
+            function clickAnything() {
+                let buttons = Array.from(document.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    let txt = btn.innerText.toLowerCase();
+                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                        btn.click();
+                        console.log('Bypassed: ' + txt);
                     }
-                } else {
-                    // 2. Jab tak naam wala box nahi dikhta, tab tak saare popups (Cookie/Continue) clear karo
-                    let buttons = Array.from(document.querySelectorAll('button'));
-                    buttons.forEach(btn => {
-                        let txt = btn.innerText.toLowerCase();
-                        if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
-                            btn.click();
-                            console.log('Cleared popup/overlay: ' + txt);
-                        }
-                    });
-                }
-            }, 1500); // Har 1.5 second mein loop lagatar poore page ko check karega
+                });
+            }
+            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
+            clickAnything();
+            setTimeout(clickAnything, 3000);
+            setTimeout(clickAnything, 6000);
+        """)
+        time.sleep(10)
+
+        # STEP 2: NAME ENTRY ONLY (Auto-click hata diya hai, sirf English naam fill hoga)
+        print("Filling English name in the input field...")
+        driver.execute_script("""
+            let nameInput = document.getElementById('name') || 
+                            document.querySelector('input[placeholder*="name"]') || 
+                            document.querySelector('input');
+            if(nameInput) {
+                nameInput.focus();
+                nameInput.value = 'Faiz'; // Sirf English naam set kiya hai
+                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log('Name field locked and filled with Faiz.');
+            }
+            // AUTO CLICK ENTER STUDIO WALA CODE YAHA SE UTAR DIYA HAI.
         """)
         
-        print("Master workflow is running... Waiting for studio entry.")
-        time.sleep(35) # Lobby se main studio ke andar aane tak ka wait time
+        print("Bot has filled the name. Now waiting for your manual entry click...")
+        # Yahan script wait karegi taaki aap manually click karke studio ke andar chale jayein
+        time.sleep(25) 
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -118,7 +96,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is streaming successfully. Check YouTube dashboard.")
+        print("Bot is doing its job. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
@@ -129,4 +107,3 @@ def start_stream():
 
 if __name__ == "__main__":
     start_stream()
-    
