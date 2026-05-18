@@ -68,48 +68,49 @@ def start_stream():
             }
         """)
         
-        # Naam entry hone ke baad safe update delay
+        # Naam fill hone ke baad safe delay taaki state update ho sake
         time.sleep(3)
 
-        # NEW STEP: NATIVE JAVASCRIPT FIXED COORDINATES HARD-CLICK BYPASS
-        print("Forcing direct browser-level click on exact coordinates (X: 505, Y: 574)...")
+        # NEW STEP: FIXED BLUE BUTTON LAYOUT COORDINATES CLICK
+        print("Forcing click event exactly on the blue Enter Studio button coordinates (X: 750, Y: 620)...")
         driver.execute_script("""
-            // Browser window ke absolute coordinates (505, 574) par element ko target karna
-            let targetElement = document.elementFromPoint(505, 574) || document.body;
+            // Screenshot layout ke hisaab se absolute coordinates target karna
+            let exactX = 750;
+            let exactY = 620;
             
-            // Raw physical mouse events taiyar karna
-            let mouseDownEvent = new MouseEvent('mousedown', {
-                clientX: 505,
-                clientY: 574,
-                bubbles: true,
-                cancelable: true,
-                view: window
-            });
+            let targetElement = document.elementFromPoint(exactX, exactY);
             
-            let mouseUpEvent = new MouseEvent('mouseup', {
-                clientX: 505,
-                clientY: 574,
-                bubbles: true,
-                cancelable: true,
-                view: window
-            });
+            // Fail-safe: Agar direct point target body par lag raha ho, toh physically button fetch karo
+            if (!targetElement || targetElement.tagName !== 'BUTTON') {
+                let buttons = Array.from(document.querySelectorAll('button'));
+                let foundBtn = buttons.find(el => el.textContent.includes('Enter studio') || el.textContent.includes('Enter'));
+                if (foundBtn) {
+                    targetElement = foundBtn;
+                    let rect = targetElement.getBoundingClientRect();
+                    exactX = rect.left + rect.width / 2;
+                    exactY = rect.top + rect.height / 2;
+                }
+            }
 
-            let clickEvent = new MouseEvent('click', {
-                clientX: 505,
-                clientY: 574,
-                bubbles: true,
-                cancelable: true,
-                view: window
-            });
+            if (targetElement) {
+                let mouseDown = new MouseEvent('mousedown', {
+                    clientX: exactX, clientY: exactY, bubbles: true, cancelable: true, view: window
+                });
+                let mouseUp = new MouseEvent('mouseup', {
+                    clientX: exactX, clientY: exactY, bubbles: true, cancelable: true, view: window
+                });
+                let clickEvt = new MouseEvent('click', {
+                    clientX: exactX, clientY: exactY, bubbles: true, cancelable: true, view: window
+                });
 
-            // Sequence wise click ko trigger karna taaki button security bypass ho sake
-            targetElement.dispatchEvent(mouseDownEvent);
-            targetElement.dispatchEvent(mouseUpEvent);
-            targetElement.dispatchEvent(clickEvent);
-            console.log('Direct absolute position coordinate click triggered successfully.');
+                targetElement.dispatchEvent(mouseDown);
+                targetElement.dispatchEvent(mouseUp);
+                targetElement.dispatchEvent(clickEvt);
+                console.log('Successfully hit the blue button at X=' + exactX + ', Y=' + exactY);
+            }
         """)
         
-        print("Coordinate click executed. Loading studio room workspace...")
+        print("Blue button click executed. Syncing workspace lobby...")
         time.sleep(25) # Studio properly load hone ka wait
 
         # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
