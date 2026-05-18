@@ -68,56 +68,41 @@ def start_stream():
             }
         """)
         
-        # Naam entry hone ke baad stable hone ka safe delay
+        # Naam stable hone ke liye chhota wait
         time.sleep(3)
 
-        # NEW STEP: 3-METHOD FAIL-SAFE STUDIO ENTRANCE MULTI-ATTACK
-        print("Triggering 3 multi-methods to force enter studio room...")
+        # NEW STEP: FOCUS INPUT & FORCE KEYBOARD ENTER (Bypass via Native Event)
+        print("Emulating solid native keyboard enter to submit the form cleanly...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || document.querySelector('input');
-            let buttons = Array.from(document.querySelectorAll('button'));
-            let enterBtn = buttons.find(el => el.textContent.includes('Enter studio') || el.textContent.includes('Enter') || el.getAttribute('type') === 'submit');
+            if(nameInput) {
+                nameInput.focus();
+                
+                // Real keyboard ki tarah "Enter" key trigger karna jisse button crash na ho
+                let enterKeyDown = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 });
+                let enterKeyPress = new KeyboardEvent('keypress', { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 });
+                let enterKeyUp = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 });
 
-            // METHOD 1: Clean dynamic JavaScript text target click
-            if (enterBtn) {
-                enterBtn.click();
-                console.log('Method 1: Direct element click executed.');
-            }
-
-            // METHOD 2: Keyboard Native 'Enter' submission on input field
-            if (nameInput) {
-                let enterEvent = new KeyboardEvent('keydown', {
-                    bubbles: true, cancelable: true, key: 'Enter', keyCode: 13
-                });
-                nameInput.dispatchEvent(enterEvent);
-                console.log('Method 2: Native Enter key event dispatched.');
-            }
-
-            // METHOD 3: Native HTML Form Level submission fallback
-            if (nameInput) {
-                let form = nameInput.closest('form');
-                if (form) {
-                    form.submit();
-                    console.log('Method 3: Core Form Submission pushed.');
-                }
+                nameInput.dispatchEvent(enterKeyDown);
+                nameInput.dispatchEvent(enterKeyPress);
+                nameInput.dispatchEvent(enterKeyUp);
+                console.log('Dispatched complete native Enter keystroke chain.');
+                
+                // Fallback: Agar enter stroke block ho toh direct click hit karega tabhi ke tabhi
+                setTimeout(() => {
+                    let buttons = Array.from(document.querySelectorAll('button'));
+                    let enterBtn = buttons.find(el => el.textContent.includes('Enter studio') || el.textContent.includes('Enter'));
+                    if(enterBtn) enterBtn.click();
+                }, 500);
             }
         """)
         
-        print("Multi-methods deployed. Waiting for studio lobby injection...")
-        time.sleep(25) # Studio properly load hone ka wait
+        print("Form submission executed. Waiting for the studio dashboard to load...")
+        time.sleep(25) # Main studio lobby load hone tak ka wait time
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
-        driver.execute_script("""
-            setInterval(() => {
-                let btns = Array.from(document.querySelectorAll('button'));
-                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
-                if (addBtn) {
-                    addBtn.click();
-                }
-            }, 5000);
-        """)
+        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' WALA LOGIC YAHA SE HTA DIYA HAI
 
-        # FFmpeg
+        # FFmpeg Section
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -128,7 +113,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is doing its job. Check YouTube dashboard.")
+        print("Bot is working inside the studio. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
