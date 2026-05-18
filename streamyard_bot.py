@@ -35,39 +35,40 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(5)
 
-        # SINGLE MASTER SEQUENTIAL JAVASCRIPT
-        print("Starting Controlled Step-by-Step JavaScript Sequence...")
+        # STEP-BY-STEP SEQUENTIAL MASTER JAVASCRIPT CONTROLLER
+        print("Deploying Strict Step-by-Step State Machine...")
         driver.execute_script("""
             let currentStep = 1; 
-            console.log('Master Step Controller Initialized.');
+            console.log('Sequential State Engine Active.');
 
-            let workflowInterval = setInterval(() => {
+            let masterSequence = setInterval(() => {
                 let buttons = Array.from(document.querySelectorAll('button'));
                 
-                // STEP 1: COOKIES ACCEPTANCE (Agar screen par dikhe toh turant bypass karo)
+                // OPTIONAL FAIL-SAFE: Baar-baar cookies check karna agar beech me aaye toh
                 let cookieBtn = buttons.find(b => {
                     let t = b.innerText.toLowerCase();
                     return t.includes('accept all') || t.includes('accept cookies') || t.includes('all cookies');
                 });
                 if (cookieBtn) {
                     cookieBtn.click();
-                    console.log('Step 1 Complete: Cookies Accepted.');
+                    console.log('Cookies cleared in background.');
                 }
 
-                // STEP 2: WELCOME / CONTINUE PAGE BYPASS
+                // STEP 1: CLICK "ALLOW MIC/CAM ACCESS" BUTTON (Screenshot stage)
                 if (currentStep === 1) {
-                    let continueBtn = buttons.find(b => {
+                    let allowBtn = buttons.find(b => {
                         let t = b.innerText.toLowerCase();
-                        return t.includes('continue') || t.includes('got it') || t.includes('allow access');
+                        return t.includes('allow mic/cam access') || t.includes('allow mic') || t.includes('allow access') || t.includes('continue');
                     });
-                    if (continueBtn) {
-                        continueBtn.click();
-                        console.log('Step 2 Complete: Clicked Continue/Welcome Bypass.');
-                        currentStep = 2; // Move to next step safely
+                    
+                    if (allowBtn) {
+                        allowBtn.click();
+                        console.log('Step 1 Complete: Clicked Allow mic/cam access button!');
+                        currentStep = 2; // Agle step par shift ho jao
                     }
                 }
 
-                // STEP 3: NAME INPUT FIELD FILLING (Aapka original working logic untouched)
+                // STEP 2: WAIT FOR NAME FIELD TO RENDER & FILL NAME (Aapka untouched 100% working login trigger)
                 if (currentStep === 2) {
                     let nameInput = document.getElementById('name') || 
                                     document.querySelector('input[placeholder*="name"]') || 
@@ -77,14 +78,13 @@ def start_stream():
                         nameInput.value = 'Faiz'; 
                         nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                         nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        console.log('Step 3 Complete: Name field securely locked with Faiz.');
-                        currentStep = 3; // Move to final click stage
+                        console.log('Step 2 Complete: Name successfully filled with Faiz without dropping state.');
+                        currentStep = 3; // Click phase par move karo
                     }
                 }
 
-                // STEP 4: DELIBERATE ENTER STUDIO EXECUTION
+                // STEP 3: SAFELY TRIGGER ENTER STUDIO BUTTON AFTER VALIDATION
                 if (currentStep === 3) {
-                    // Small internal timeout taaki input framework process ho sake
                     setTimeout(() => {
                         let enterBtn = buttons.find(el => 
                             el.textContent.includes('Enter studio') || 
@@ -95,20 +95,20 @@ def start_stream():
                         if (enterBtn) {
                             enterBtn.focus();
                             enterBtn.click();
-                            console.log('Step 4 Complete: Force Clicked Enter Studio!');
-                            clearInterval(workflowInterval); // Poora sequence khatam, loop stop!
+                            console.log('Step 3 Complete: Force Clicked Enter Studio button clean!');
+                            clearInterval(masterSequence); // Poora logic successfully run ho gaya, loop destroy karo!
                         }
-                    }, 2000); // 2 second ka gap naam fill hone aur enter dabne ke beech
+                    }, 2000); // 2 second ka gap naam stable karne ke liye
                     currentStep = 4;
                 }
 
-            }, 1500); // Har 1.5 second me system state machine check karega
+            }, 1500); // Har 1.5 second me logic array evaluate hoga step-by-step
         """)
         
-        print("Sequence is running perfectly in background. Transitioning to studio room...")
-        time.sleep(35) # Studio properly load hone tak ka pure wait time
+        print("Sequential controller is processing the steps... Redirecting to studio lobby.")
+        time.sleep(35) # Live room aur workspace fully render hone tak ka wait time
 
-        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' LOOP KO COMPLETELY YAHA SE HTA DIYA HAI.
+        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' LOOP POORI TARAH YAHA SE DETACHED HAI.
 
         # FFmpeg Section
         ffmpeg_cmd = [
@@ -121,7 +121,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot stream successfully initialized. Check YouTube dashboard.")
+        print("Pipeline streaming active. Monitor YouTube Dashboard.")
         time.sleep(21300) 
         process.terminate()
 
