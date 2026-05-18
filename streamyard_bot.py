@@ -1,4 +1,4 @@
-Import os
+import os
 import time
 import subprocess
 from selenium import webdriver
@@ -106,5 +106,4 @@ def start_stream():
 
 if __name__ == "__main__":
     start_stream()
-
-
+    
