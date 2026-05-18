@@ -4,6 +4,7 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -14,7 +15,7 @@ def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--window-size=1920,1080") # Window size locked hai
     
     # Permissions Bypass (FORCE FLAGS)
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
@@ -35,7 +36,7 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
+        # STEP 1: FORCE CLICK EVERYTHING (Aapka untouched code)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -47,14 +48,13 @@ def start_stream():
                     }
                 });
             }
-            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
             clickAnything();
             setTimeout(clickAnything, 3000);
             setTimeout(clickAnything, 6000);
         """)
         time.sleep(10)
 
-        # STEP 2: NAME ENTRY ONLY (Auto-click hata diya hai, sirf English naam fill hoga)
+        # STEP 2: NAME ENTRY ONLY (Aapka untouched code - 'Faiz' fill karega)
         print("Filling English name in the input field...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || 
@@ -62,19 +62,27 @@ def start_stream():
                             document.querySelector('input');
             if(nameInput) {
                 nameInput.focus();
-                nameInput.value = 'Faiz'; // Sirf English naam set kiya hai
+                nameInput.value = 'Faiz'; 
                 nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                 nameInput.dispatchEvent(new Event('change', { bubbles: true }));
                 console.log('Name field locked and filled with Faiz.');
             }
-            // AUTO CLICK ENTER STUDIO WALA CODE YAHA SE UTAR DIYA HAI.
         """)
         
-        print("Bot has filled the name. Now waiting for your manual entry click...")
-        # Yahan script wait karegi taaki aap manually click karke studio ke andar chale jayein
-        time.sleep(25) 
+        # Naam likhne ke baad 3 second ka wait state register karne ke liye
+        time.sleep(3)
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
+        # NEW STEP: NATIVE HARDWARE-LEVEL FIXED COORDINATES CLICK
+        print("Moving virtual mouse pointer to fixed coordinates (X: 960, Y: 680) and clicking...")
+        
+        # ActionChains browser window ke top-left (0,0) se screen pixels calculation karta hai
+        actions = ActionChains(driver)
+        actions.move_by_offset(960, 680).click().perform()
+        
+        print("Physical click simulation done on fixed coordinates.")
+        time.sleep(25) # Studio properly load hone ka wait
+
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -107,3 +115,4 @@ def start_stream():
 
 if __name__ == "__main__":
     start_stream()
+    
