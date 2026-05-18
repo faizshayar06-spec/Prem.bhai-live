@@ -35,7 +35,7 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Welcome Screens Bypass)
+        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -47,26 +47,27 @@ def start_stream():
                     }
                 });
             }
+            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
             clickAnything();
             setTimeout(clickAnything, 3000);
             setTimeout(clickAnything, 6000);
         """)
         time.sleep(10)
 
-        # STEP 2: NAME ENTRY & EXPLICIT AUTO-CLICK ENTER STUDIO
-        print("Filling name and clicking enter studio...")
+        # STEP 2: NAME ENTRY AND AUTOMATIC ENTER STUDIO CLICK (With Safe Delay)
+        print("Filling English name in the input field and queueing enter studio...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || 
                             document.querySelector('input[placeholder*="name"]') || 
                             document.querySelector('input');
             if(nameInput) {
                 nameInput.focus();
-                nameInput.value = 'Faiz'; 
+                nameInput.value = 'Faiz'; // Aapka sahi chalne wala English naam
                 nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                 nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log('Name field filled with Faiz.');
-                
-                // Naam fill hone ke thik 2 seconds baad Enter Studio button press hoga
+                console.log('Name field locked and filled with Faiz.');
+
+                // NAAM LIKHNE KE THIK 5 SECONDS BAAD ENTER STUDIO PAR AUTOMATIC CLICK HOGA
                 setTimeout(() => {
                     let buttons = Array.from(document.querySelectorAll('button'));
                     let enterBtn = buttons.find(el => 
@@ -75,22 +76,22 @@ def start_stream():
                         el.getAttribute('type') === 'submit'
                     );
                     
-                    if(enterBtn) {
+                    if (enterBtn) {
                         enterBtn.click();
-                        console.log('Successfully clicked Enter Studio!');
+                        console.log('Successfully clicked Enter Studio button.');
                     } else {
-                        // Fallback submit if button is strict inside a form element
+                        // Agar button nahi milta toh form submit fallback trigger hoga
                         let form = nameInput.closest('form');
                         if(form) form.submit();
                     }
-                }, 2000);
+                }, 5000); // 5000ms = 5 seconds ka safe wait time nominal entry ke liye
             }
         """)
         
-        print("Final Studio Entry Attempt...")
-        time.sleep(25) # Studio properly render hone tak ka wait
+        print("Waiting for studio environment to load fully...")
+        time.sleep(25) # Studio ke andar enter hone ka wait
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -101,7 +102,7 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg Section
+        # FFmpeg
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -112,7 +113,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot workflow completely automated. Checking YouTube dashboard.")
+        print("Bot is doing its job. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
