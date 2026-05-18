@@ -84,5 +84,68 @@ def start_stream():
 
                         // 3. Final submission (Naam fill hone ke baad strict Enter action)
                         setTimeout(() => {
-                            let buttons = Array.from(document.
+                            let buttons = Array.from(document.querySelectorAll('button'));
+                            let enterBtn = buttons.find(el => 
+                                el.textContent.includes('Enter studio') || 
+                                el.textContent.includes('Enter') ||
+                                el.getAttribute('type') === 'submit'
+                            );
+                            
+                            if (enterBtn) {
+                                enterBtn.click();
+                                console.log('Enter Studio button clicked.');
+                            } else {
+                                console.log('Button click failed, trying form submit fallback.');
+                                let form = nameInput.closest('form');
+                                if(form) form.submit();
+                            }
+                        }, 1000);
+
+                    }, 1500);
+                } else {
+                    console.log('Name input field not found.');
+                }
+            }
+            fillNameAndEnter();
+        """)
         
+        print("Waiting for studio environment to load fully...")
+        time.sleep(25) # Studio ke andar enter hone ka safe buffer wait
+
+        # STEP 3: AUTOMATIC ADD TO STAGE IF HOST HASN'T ADDED YET
+        driver.execute_script("""
+            setInterval(() => {
+                let btns = Array.from(document.querySelectorAll('button'));
+                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
+                if (addBtn) {
+                    addBtn.click();
+                    console.log('Clicked Add to Stage button inside studio.');
+                }
+            }, 5000);
+        """)
+
+        # FFmpeg Screen Capture & RTMP Streaming Section
+        ffmpeg_cmd = [
+            'ffmpeg',
+            '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
+            '-f', 'pulse', '-i', 'default',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '4000k',
+            '-pix_fmt', 'yuv420p',
+            '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
+        ]
+        
+        process = subprocess.Popen(ffmpeg_cmd)
+        print("Bot automation successfully executed. Checking stream status...")
+        
+        # Stream running duration (approx 6 hours)
+        time.sleep(21300) 
+        process.terminate()
+
+    except Exception as e:
+        print(f"Error encountered: {e}")
+    finally:
+        driver.quit()
+
+if __name__ == "__main__":
+    start_stream()
+    
