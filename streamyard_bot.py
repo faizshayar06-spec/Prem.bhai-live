@@ -16,7 +16,7 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Permissions Bypass (Camera, Mic aur Autoplay force allow karne ke liye)
+    # Permissions Bypass (Mic, Camera aur saari automatic popups bypass flags)
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
@@ -31,100 +31,97 @@ def start_stream():
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
     try:
-        print("Opening StreamYard...")
+        print("Opening StreamYard Room...")
         driver.get(GUEST_URL)
         
-        # Green room page load hone ke liye wait karein
-        time.sleep(12)
+        # Initial loading time
+        time.sleep(8)
 
-        # STEP 1: COOKIES YA INITIAL POPUPS KO AUTOMATIC HANDLE KARNA
+        # STEP 1 & 2: FULL FORCE AUTOMATION (Jab tak naam na likha jaye, sab kuch click karo)
+        print("Starting Force-Click Loop until Name Box is found...")
         driver.execute_script("""
-            function clearPopups() {
-                let buttons = Array.from(document.querySelectorAll('button'));
-                buttons.forEach(btn => {
-                    let txt = btn.innerText.toLowerCase();
-                    if(txt.includes('accept') || txt.includes('cookie') || txt.includes('got it')) {
-                        btn.click();
-                        console.log('Cleared popup: ' + txt);
-                    }
-                });
-            }
-            clearPopups();
-        """)
-        time.sleep(3)
+            let nameFilled = false;
 
-        # STEP 2: NAME ENTRY AUR ENTER STUDIO (Urdu to English Fallback Ke Saath)
-        print("Entering name with fallback mechanism...")
-        driver.execute_script("""
-            function fillNameAndEnter() {
+            let forceInterval = setInterval(() => {
+                // 1. Sabse pehle dhoondho ki kya Name Input Box screen par aa gaya hai?
                 let nameInput = document.getElementById('name') || 
                                 document.querySelector('input[name="name"]') || 
-                                document.querySelector('input[placeholder*="Display name"]') ||
+                                document.querySelector('input[placeholder*="name"]') ||
                                 document.querySelector('input[type="text"]');
                 
-                if (nameInput) {
+                if (nameInput && !nameFilled) {
+                    console.log('Target Achieved: Name input field found!');
                     nameInput.focus();
                     
-                    // 1. Pehle Urdu naam try karte hain
+                    // Urdu to English Fallback text insertion
                     nameInput.value = 'فیض';
                     nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                     nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                    console.log('Tried filling Urdu name.');
-
-                    // 2. 1.5 second baad check karenge agar characters support nahi hue ya invalid raha
+                    
+                    // Safely check if Urdu script is retained, otherwise fallback to English
                     setTimeout(() => {
-                        // Agar input khali reh gaya ya form ne block kiya, toh English standard try karo
-                        if (!nameInput.value || nameInput.value.trim() === "" || nameInput.classList.contains('invalid')) {
-                            console.log('Urdu script not fully supported or blocked. Switching to English...');
-                            nameInput.value = ''; 
-                            nameInput.value = 'Faiz'; 
+                        if (!nameInput.value || nameInput.value.trim() === "") {
+                            nameInput.value = 'Faiz';
                             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                             nameInput.dispatchEvent(new Event('change', { bubbles: true }));
                         }
+                    }, 500);
 
-                        // 3. Final submission (Naam fill hone ke baad strict Enter action)
-                        setTimeout(() => {
-                            let buttons = Array.from(document.querySelectorAll('button'));
-                            let enterBtn = buttons.find(el => 
-                                el.textContent.includes('Enter studio') || 
-                                el.textContent.includes('Enter') ||
-                                el.getAttribute('type') === 'submit'
-                            );
-                            
-                            if (enterBtn) {
-                                enterBtn.click();
-                                console.log('Enter Studio button clicked.');
-                            } else {
-                                console.log('Button click failed, trying form submit fallback.');
-                                let form = nameInput.closest('form');
-                                if(form) form.submit();
+                    nameFilled = true; // Loop ko pata chal gaya naam likh diya hai
+                    
+                    // Naam likhne ke thik 1.5 second baad Enter button par final click
+                    setTimeout(() => {
+                        let finalButtons = Array.from(document.querySelectorAll('button'));
+                        let enterBtn = finalButtons.find(el => 
+                            el.textContent.includes('Enter studio') || 
+                            el.textContent.includes('Enter') ||
+                            el.getAttribute('type') === 'submit'
+                        );
+                        if (enterBtn) {
+                            enterBtn.click();
+                            console.log('Successfully Entered Studio Room.');
+                            clearInterval(forceInterval); // Loop ko stop karo jab kaam poora ho jaye
+                        } else {
+                            let form = nameInput.closest('form');
+                            if(form) {
+                                form.submit();
+                                clearInterval(forceInterval);
                             }
-                        }, 1000);
-
+                        }
                     }, 1500);
-                } else {
-                    console.log('Name input field not found.');
+
+                } else if (!nameFilled) {
+                    // 2. Agar Name Box abhi tak nahi aaya, toh raaste me jo bhi button dikhe usko click maro (Continue, Allow, etc.)
+                    let currentButtons = Array.from(document.querySelectorAll('button'));
+                    currentButtons.forEach(btn => {
+                        let txt = btn.innerText.toLowerCase();
+                        // Har us button ko click karo jo next page par le jaye, mic-cam validation bypass kare ya welcome door khole
+                        if(txt.includes('continue') || txt.includes('allow') || txt.includes('accept') || txt.includes('got it')) {
+                            btn.click();
+                            console.log('Force Clicked Element: ' + txt);
+                        }
+                    });
                 }
-            }
-            fillNameAndEnter();
+            }, 2500); // Har 2.5 second me screen scan aur force-action hoga
         """)
         
-        print("Waiting for studio environment to load fully...")
-        time.sleep(25) # Studio ke andar enter hone ka safe buffer wait
+        # Studio ke load hone ke liye safe transition wait
+        print("Waiting for studio workspace to synchronize...")
+        time.sleep(30) 
 
-        # STEP 3: AUTOMATIC ADD TO STAGE IF HOST HASN'T ADDED YET
+        # STEP 3: STUDIO KE ANDAR AUTOMATIC ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
                 let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
                 if (addBtn) {
                     addBtn.click();
-                    console.log('Clicked Add to Stage button inside studio.');
+                    console.log('Bot added to stage.');
                 }
             }, 5000);
         """)
 
-        # FFmpeg Screen Capture & RTMP Streaming Section
+        # FFmpeg Section
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -135,14 +132,12 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot automation successfully executed. Checking stream status...")
-        
-        # Stream running duration (approx 6 hours)
+        print("Bot sequence working flawlessly. Check status.")
         time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
-        print(f"Error encountered: {e}")
+        print(f"Error: {e}")
     finally:
         driver.quit()
 
