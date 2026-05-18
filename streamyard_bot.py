@@ -33,63 +33,63 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(10)
+        time.sleep(5)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
+        # STEP 1 & 2: SINGLE MAIN LOOP (Bypass -> Fill Name -> Wait -> Enter Studio)
+        print("Running unified JavaScript workflow loop...")
         driver.execute_script("""
-            function clickAnything() {
-                let buttons = Array.from(document.querySelectorAll('button'));
-                buttons.forEach(btn => {
-                    let txt = btn.innerText.toLowerCase();
-                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
-                        btn.click();
-                        console.log('Bypassed: ' + txt);
+            let nameFilled = false;
+            let studioEntered = false;
+
+            let mainWorkflow = setInterval(() => {
+                // 1. Sabse pehle check karo kya Display Name box aa gaya hai?
+                let nameInput = document.getElementById('name') || 
+                                document.querySelector('input[placeholder*="name"]') || 
+                                document.querySelector('input[type="text"]');
+                
+                if (nameInput) {
+                    // Agar name input mil gaya aur abhi tak naam nahi likha hai, toh naam likho
+                    if (!nameFilled) {
+                        nameInput.focus();
+                        nameInput.value = 'Faiz';
+                        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        console.log('Name field filled with Faiz.');
+                        nameFilled = true;
+
+                        # Naam likhne ke thik 3 second baad Enter Studio par click hoga
+                        setTimeout(() => {
+                            let buttons = Array.from(document.querySelectorAll('button'));
+                            let enterBtn = buttons.find(el => 
+                                el.textContent.includes('Enter studio') || 
+                                el.textContent.includes('Enter') ||
+                                el.getAttribute('type') === 'submit'
+                            );
+                            
+                            if (enterBtn && !studioEntered) {
+                                enterBtn.click();
+                                console.log('Successfully clicked Enter Studio!');
+                                studioEntered = true;
+                                clearInterval(mainWorkflow); // Kaam poora hone par loop band karo
+                            }
+                        }, 3000);
                     }
-                });
-            }
-            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
-            clickAnything();
-            setTimeout(clickAnything, 3000);
-            setTimeout(clickAnything, 6000);
-        """)
-        time.sleep(10)
-
-        # STEP 2: NAME ENTRY AND AUTOMATIC ENTER STUDIO CLICK (With Safe Delay)
-        print("Filling English name in the input field and queueing enter studio...")
-        driver.execute_script("""
-            let nameInput = document.getElementById('name') || 
-                            document.querySelector('input[placeholder*="name"]') || 
-                            document.querySelector('input');
-            if(nameInput) {
-                nameInput.focus();
-                nameInput.value = 'Faiz'; // Aapka sahi chalne wala English naam
-                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-                nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log('Name field locked and filled with Faiz.');
-
-                // NAAM LIKHNE KE THIK 5 SECONDS BAAD ENTER STUDIO PAR AUTOMATIC CLICK HOGA
-                setTimeout(() => {
+                } else {
+                    // 2. Agar naam wala box nahi aaya, toh raste ke baaki buttons (Cookies/Continue) clear karo
                     let buttons = Array.from(document.querySelectorAll('button'));
-                    let enterBtn = buttons.find(el => 
-                        el.textContent.includes('Enter studio') || 
-                        el.textContent.includes('Enter') ||
-                        el.getAttribute('type') === 'submit'
-                    );
-                    
-                    if (enterBtn) {
-                        enterBtn.click();
-                        console.log('Successfully clicked Enter Studio button.');
-                    } else {
-                        // Agar button nahi milta toh form submit fallback trigger hoga
-                        let form = nameInput.closest('form');
-                        if(form) form.submit();
-                    }
-                }, 5000); // 5000ms = 5 seconds ka safe wait time nominal entry ke liye
-            }
+                    buttons.forEach(btn => {
+                        let txt = btn.innerText.toLowerCase();
+                        if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                            btn.click();
+                            console.log('Force Clicked Element: ' + txt);
+                        }
+                    });
+                }
+            }, 2000); // Har 2 second mein poori screen scan hogi
         """)
         
-        print("Waiting for studio environment to load fully...")
-        time.sleep(25) # Studio ke andar enter hone ka wait
+        print("Waiting for studio entry to complete...")
+        time.sleep(35) # Studio ke andar set hone ka safe wait time
 
         # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
         driver.execute_script("""
