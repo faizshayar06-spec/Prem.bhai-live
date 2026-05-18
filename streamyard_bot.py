@@ -4,8 +4,6 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -35,76 +33,70 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(10)
+        time.sleep(5)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Timers are saved to window object)
+        # SINGLE POWERFUL JAVASCRIPT MASTER LOOP TO CONTROL EVERYTHING
+        print("Starting JavaScript Master Engine...")
         driver.execute_script("""
-            function clickAnything() {
-                let buttons = Array.from(document.querySelectorAll('button'));
-                buttons.forEach(btn => {
-                    let txt = btn.innerText.toLowerCase();
-                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
-                        btn.click();
-                        console.log('Bypassed: ' + txt);
+            let nameFilled = false;
+            let studioEntered = false;
+
+            let masterInterval = setInterval(() => {
+                // 1. Check karo kya Display Name ka input box screen par aa gaya hai?
+                let nameInput = document.getElementById('name') || 
+                                document.querySelector('input[placeholder*="name"]') || 
+                                document.querySelector('input[type="text"]');
+                
+                if (nameInput) {
+                    // Agar name box mil gaya aur abhi tak naam nahi bhara hai
+                    if (!nameFilled) {
+                        nameInput.focus();
+                        
+                        // React State compatibility trigger ke saath naam fill karna
+                        let nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                        nativeInputValueSetter.call(nameInput, 'Faiz');
+                        
+                        // React ko batane ke liye input events fire karna
+                        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+                        console.log('Name field forcefully filled with Faiz via React setter.');
+                        nameFilled = true;
+
+                        // Naam fill hone ke thik 2 seconds baad Enter Studio click hoga
+                        setTimeout(() => {
+                            let buttons = Array.from(document.querySelectorAll('button'));
+                            let enterBtn = buttons.find(el => 
+                                el.textContent.includes('Enter studio') || 
+                                el.textContent.includes('Enter') ||
+                                el.getAttribute('type') === 'submit'
+                            );
+                            
+                            if (enterBtn && !studioEntered) {
+                                enterBtn.click();
+                                console.log('Successfully Force Clicked Enter Studio!');
+                                studioEntered = true;
+                                clearInterval(masterInterval); // Kaam khatam, loop close!
+                            }
+                        }, 2000);
                     }
-                });
-            }
-            clickAnything();
-            window.t1 = setTimeout(clickAnything, 3000);
-            window.t2 = setTimeout(clickAnything, 6000);
-        """)
-        time.sleep(10)
-
-        # STEP 2: NAME ENTRY ONLY (Aapka original 100% working code - UNTOUCHED)
-        print("Filling English name in the input field...")
-        driver.execute_script("""
-            let nameInput = document.getElementById('name') || 
-                            document.querySelector('input[placeholder*="name"]') || 
-                            document.querySelector('input');
-            if(nameInput) {
-                nameInput.focus();
-                nameInput.value = 'Faiz'; 
-                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-                nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log('Name field locked and filled with Faiz.');
-            }
+                } else {
+                    // 2. Jab tak naam wala box nahi dikhta, tab tak saare popups (Cookie/Continue) clear karo
+                    let buttons = Array.from(document.querySelectorAll('button'));
+                    buttons.forEach(btn => {
+                        let txt = btn.innerText.toLowerCase();
+                        if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                            btn.click();
+                            console.log('Cleared popup/overlay: ' + txt);
+                        }
+                    });
+                }
+            }, 1500); // Har 1.5 second mein loop lagatar poore page ko check karega
         """)
         
-        # STEP 2.1: PURANE JAVA WORKFLOW KO POORI TARAH STOP KARNA
-        print("Killing previous background timeouts to secure name field state...")
-        driver.execute_script("""
-            clearTimeout(window.t1);
-            clearTimeout(window.t2);
-            console.log('All initial background scripts destroyed successfully.');
-        """)
-        
-        time.sleep(2) # State freeze karne ke liye chhota buffer wait
+        print("Master workflow is running... Waiting for studio entry.")
+        time.sleep(35) # Lobby se main studio ke andar aane tak ka wait time
 
-        # STEP 2.2: FORCEFULLY CLICK ENTER STUDIO VIA NATIVE KEYSTROKE OR BUTTON ACTION
-        print("Executing clean manual Enter Studio action via JavaScript...")
-        driver.execute_script("""
-            let nameInput = document.getElementById('name') || document.querySelector('input');
-            let buttons = Array.from(document.querySelectorAll('button'));
-            let enterBtn = buttons.find(el => 
-                el.textContent.includes('Enter studio') || 
-                el.textContent.includes('Enter') ||
-                el.getAttribute('type') === 'submit'
-            );
-            
-            if (enterBtn) {
-                enterBtn.click();
-                console.log('Enter Studio button force clicked.');
-            } else if (nameInput) {
-                // Agar button target na ho paye, toh active element par form submit push karo
-                let form = nameInput.closest('form');
-                if(form) form.submit();
-            }
-        """)
-        
-        print("Bypass operation done. Transitioning to inside the studio...")
-        time.sleep(25) # Studio properly load hone tak ka wait
-
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -126,7 +118,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is doing its job. Check YouTube dashboard.")
+        print("Bot is streaming successfully. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
