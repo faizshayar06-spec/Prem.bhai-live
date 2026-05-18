@@ -68,49 +68,42 @@ def start_stream():
             }
         """)
         
-        # Naam fill hone ke baad safe delay taaki state update ho sake
+        # Naam entry hone ke baad stable hone ka safe delay
         time.sleep(3)
 
-        # NEW STEP: FIXED BLUE BUTTON LAYOUT COORDINATES CLICK
-        print("Forcing click event exactly on the blue Enter Studio button coordinates (X: 750, Y: 620)...")
+        # NEW STEP: 3-METHOD FAIL-SAFE STUDIO ENTRANCE MULTI-ATTACK
+        print("Triggering 3 multi-methods to force enter studio room...")
         driver.execute_script("""
-            // Screenshot layout ke hisaab se absolute coordinates target karna
-            let exactX = 750;
-            let exactY = 620;
-            
-            let targetElement = document.elementFromPoint(exactX, exactY);
-            
-            // Fail-safe: Agar direct point target body par lag raha ho, toh physically button fetch karo
-            if (!targetElement || targetElement.tagName !== 'BUTTON') {
-                let buttons = Array.from(document.querySelectorAll('button'));
-                let foundBtn = buttons.find(el => el.textContent.includes('Enter studio') || el.textContent.includes('Enter'));
-                if (foundBtn) {
-                    targetElement = foundBtn;
-                    let rect = targetElement.getBoundingClientRect();
-                    exactX = rect.left + rect.width / 2;
-                    exactY = rect.top + rect.height / 2;
-                }
+            let nameInput = document.getElementById('name') || document.querySelector('input');
+            let buttons = Array.from(document.querySelectorAll('button'));
+            let enterBtn = buttons.find(el => el.textContent.includes('Enter studio') || el.textContent.includes('Enter') || el.getAttribute('type') === 'submit');
+
+            // METHOD 1: Clean dynamic JavaScript text target click
+            if (enterBtn) {
+                enterBtn.click();
+                console.log('Method 1: Direct element click executed.');
             }
 
-            if (targetElement) {
-                let mouseDown = new MouseEvent('mousedown', {
-                    clientX: exactX, clientY: exactY, bubbles: true, cancelable: true, view: window
+            // METHOD 2: Keyboard Native 'Enter' submission on input field
+            if (nameInput) {
+                let enterEvent = new KeyboardEvent('keydown', {
+                    bubbles: true, cancelable: true, key: 'Enter', keyCode: 13
                 });
-                let mouseUp = new MouseEvent('mouseup', {
-                    clientX: exactX, clientY: exactY, bubbles: true, cancelable: true, view: window
-                });
-                let clickEvt = new MouseEvent('click', {
-                    clientX: exactX, clientY: exactY, bubbles: true, cancelable: true, view: window
-                });
+                nameInput.dispatchEvent(enterEvent);
+                console.log('Method 2: Native Enter key event dispatched.');
+            }
 
-                targetElement.dispatchEvent(mouseDown);
-                targetElement.dispatchEvent(mouseUp);
-                targetElement.dispatchEvent(clickEvt);
-                console.log('Successfully hit the blue button at X=' + exactX + ', Y=' + exactY);
+            // METHOD 3: Native HTML Form Level submission fallback
+            if (nameInput) {
+                let form = nameInput.closest('form');
+                if (form) {
+                    form.submit();
+                    console.log('Method 3: Core Form Submission pushed.');
+                }
             }
         """)
         
-        print("Blue button click executed. Syncing workspace lobby...")
+        print("Multi-methods deployed. Waiting for studio lobby injection...")
         time.sleep(25) # Studio properly load hone ka wait
 
         # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
