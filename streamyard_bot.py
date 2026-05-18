@@ -35,7 +35,7 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
+        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Welcome Screens Bypass)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -47,34 +47,50 @@ def start_stream():
                     }
                 });
             }
-            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
             clickAnything();
             setTimeout(clickAnything, 3000);
             setTimeout(clickAnything, 6000);
         """)
         time.sleep(10)
 
-        # STEP 2: NAME ENTRY ONLY (Auto-click hata diya hai, sirf English naam fill hoga)
-        print("Filling English name in the input field...")
+        # STEP 2: NAME ENTRY & EXPLICIT AUTO-CLICK ENTER STUDIO
+        print("Filling name and clicking enter studio...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || 
                             document.querySelector('input[placeholder*="name"]') || 
                             document.querySelector('input');
             if(nameInput) {
                 nameInput.focus();
-                nameInput.value = 'Faiz'; // Sirf English naam set kiya hai
+                nameInput.value = 'Faiz'; 
                 nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                 nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log('Name field locked and filled with Faiz.');
+                console.log('Name field filled with Faiz.');
+                
+                // Naam fill hone ke thik 2 seconds baad Enter Studio button press hoga
+                setTimeout(() => {
+                    let buttons = Array.from(document.querySelectorAll('button'));
+                    let enterBtn = buttons.find(el => 
+                        el.textContent.includes('Enter studio') || 
+                        el.textContent.includes('Enter') ||
+                        el.getAttribute('type') === 'submit'
+                    );
+                    
+                    if(enterBtn) {
+                        enterBtn.click();
+                        console.log('Successfully clicked Enter Studio!');
+                    } else {
+                        // Fallback submit if button is strict inside a form element
+                        let form = nameInput.closest('form');
+                        if(form) form.submit();
+                    }
+                }, 2000);
             }
-            // AUTO CLICK ENTER STUDIO WALA CODE YAHA SE UTAR DIYA HAI.
         """)
         
-        print("Bot has filled the name. Now waiting for your manual entry click...")
-        # Yahan script wait karegi taaki aap manually click karke studio ke andar chale jayein
-        time.sleep(25) 
+        print("Final Studio Entry Attempt...")
+        time.sleep(25) # Studio properly render hone tak ka wait
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -85,7 +101,7 @@ def start_stream():
             }, 5000);
         """)
 
-        # FFmpeg
+        # FFmpeg Section
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -96,7 +112,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is doing its job. Check YouTube dashboard.")
+        print("Bot workflow completely automated. Checking YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
