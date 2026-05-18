@@ -51,9 +51,9 @@ def start_stream():
             setTimeout(clickAnything, 3000);
             setTimeout(clickAnything, 6000);
         """)
-        time.sleep(12)
+        time.sleep(10)
 
-        # STEP 2 (A): ONLY FILL ENGLISH NAME VIA JAVASCRIPT
+        # STEP 2: NAME ENTRY (Aapka default working code)
         print("Filling English name in the input field...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || 
@@ -68,11 +68,10 @@ def start_stream():
             }
         """)
         
-        # Aapne jo kaha: Naam likhne ke baad thoda jyada wait (15 Seconds)
-        print("Name filled. Waiting 15 seconds for stability before forcing enter...")
-        time.sleep(15) 
+        # Naam likhne ke baad page stabilize hone ke liye chhota wait
+        time.sleep(3) 
 
-        # STEP 2 (B): FORCEFULLY CLICK ENTER STUDIO VIA JAVASCRIPT
+        # STEP 2.5: JAVASCRIPT SE FORCEFULLY ENTER STUDIO CLICK KRWANA
         print("Executing force click on Enter Studio button...")
         driver.execute_script("""
             let buttons = Array.from(document.querySelectorAll('button'));
@@ -85,7 +84,7 @@ def start_stream():
                 enterBtn.click();
                 console.log('Force clicked Enter Studio!');
             } else {
-                // Agar button nahi mila toh directly form submit karo
+                // Fallback: Agar button ka text detect na ho toh form submittal force karo
                 let nameInput = document.getElementById('name') || document.querySelector('input');
                 if(nameInput) {
                     let form = nameInput.closest('form');
@@ -94,10 +93,10 @@ def start_stream():
             }
         """)
         
-        print("Final Studio Entry Attempt complete. Syncing with room...")
-        time.sleep(25) # Studio properly load hone ka wait
+        print("Studio Entry command sent. Transitioning to live room...")
+        time.sleep(25) # Studio load hone ka wait
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad)
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
