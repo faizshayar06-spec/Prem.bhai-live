@@ -35,7 +35,7 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Aapka untouched working code)
+        # STEP 1: FORCE CLICK EVERYTHING (Aapka original untouched working code)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -47,13 +47,14 @@ def start_stream():
                     }
                 });
             }
+            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
             clickAnything();
             setTimeout(clickAnything, 3000);
             setTimeout(clickAnything, 6000);
         """)
         time.sleep(10)
 
-        # STEP 2: NAME ENTRY ONLY (Aapka untouched working code - 'Faiz' fill karega)
+        # STEP 2: NAME ENTRY ONLY (Aapka original 100% working code - UNTOUCHED)
         print("Filling English name in the input field...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || 
@@ -61,46 +62,48 @@ def start_stream():
                             document.querySelector('input');
             if(nameInput) {
                 nameInput.focus();
-                nameInput.value = 'Faiz'; 
+                nameInput.value = 'Faiz'; // Sirf English naam set kiya hai
                 nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                 nameInput.dispatchEvent(new Event('change', { bubbles: true }));
                 console.log('Name field locked and filled with Faiz.');
             }
+            // AUTO CLICK ENTER STUDIO WALA CODE YAHA SE UTAR DIYA HAI.
         """)
         
-        # Naam stable hone ke liye chhota wait
-        time.sleep(3)
+        # Naam secure hone ke liye ek chhota sa stable pause delay
+        time.sleep(3) 
 
-        # NEW STEP: FOCUS INPUT & FORCE KEYBOARD ENTER (Bypass via Native Event)
-        print("Emulating solid native keyboard enter to submit the form cleanly...")
+        # NEW STEP: SEPARATE ISOLATED JAVASCRIPT FOR ERROR-FREE CLICK
+        print("Executing isolated error-free JavaScript to enter studio...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || document.querySelector('input');
-            if(nameInput) {
+            if (nameInput) {
+                // Ensure focus remains on input so state doesn't clear
                 nameInput.focus();
                 
-                // Real keyboard ki tarah "Enter" key trigger karna jisse button crash na ho
-                let enterKeyDown = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 });
-                let enterKeyPress = new KeyboardEvent('keypress', { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 });
-                let enterKeyUp = new KeyboardEvent('keyup', { bubbles: true, cancelable: true, key: 'Enter', keyCode: 13, which: 13 });
-
-                nameInput.dispatchEvent(enterKeyDown);
-                nameInput.dispatchEvent(enterKeyPress);
-                nameInput.dispatchEvent(enterKeyUp);
-                console.log('Dispatched complete native Enter keystroke chain.');
+                let buttons = Array.from(document.querySelectorAll('button'));
+                let enterBtn = buttons.find(el => 
+                    el.textContent.includes('Enter studio') || 
+                    el.textContent.includes('Enter') ||
+                    el.getAttribute('type') === 'submit'
+                );
                 
-                // Fallback: Agar enter stroke block ho toh direct click hit karega tabhi ke tabhi
-                setTimeout(() => {
-                    let buttons = Array.from(document.querySelectorAll('button'));
-                    let enterBtn = buttons.find(el => el.textContent.includes('Enter studio') || el.textContent.includes('Enter'));
-                    if(enterBtn) enterBtn.click();
-                }, 500);
+                if (enterBtn) {
+                    // Standard Form Element Click dispatch bina event collisions ke
+                    enterBtn.click();
+                    console.log('Studio enter click triggered successfully via separate script.');
+                } else {
+                    // Fallback button reference directly submit form
+                    let form = nameInput.closest('form');
+                    if(form) form.submit();
+                }
             }
         """)
         
-        print("Form submission executed. Waiting for the studio dashboard to load...")
-        time.sleep(25) # Main studio lobby load hone tak ka wait time
+        print("Bypass logic deployed. Waiting for studio space to load...")
+        time.sleep(25) # Main studio andar load hone ka wait time
 
-        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' WALA LOGIC YAHA SE HTA DIYA HAI
+        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' REPETITIVE LOOP YAHA SE COMPLETELY HTA DIYA HAI
 
         # FFmpeg Section
         ffmpeg_cmd = [
@@ -113,7 +116,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is working inside the studio. Check YouTube dashboard.")
+        print("Bot is successfully inside the studio. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
