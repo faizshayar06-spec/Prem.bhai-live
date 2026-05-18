@@ -15,7 +15,7 @@ def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080") # Window size locked hai
+    chrome_options.add_argument("--window-size=1920,1080")
     
     # Permissions Bypass (FORCE FLAGS)
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
@@ -36,7 +36,7 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Aapka untouched code)
+        # STEP 1: FORCE CLICK EVERYTHING (Aapka untouched working code)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -54,7 +54,7 @@ def start_stream():
         """)
         time.sleep(10)
 
-        # STEP 2: NAME ENTRY ONLY (Aapka untouched code - 'Faiz' fill karega)
+        # STEP 2: NAME ENTRY ONLY (Aapka untouched working code - 'Faiz' fill karega)
         print("Filling English name in the input field...")
         driver.execute_script("""
             let nameInput = document.getElementById('name') || 
@@ -69,17 +69,17 @@ def start_stream():
             }
         """)
         
-        # Naam likhne ke baad 3 second ka wait state register karne ke liye
+        # Naam entry hone ke baad safe update delay
         time.sleep(3)
 
-        # NEW STEP: NATIVE HARDWARE-LEVEL FIXED COORDINATES CLICK
-        print("Moving virtual mouse pointer to fixed coordinates (X: 960, Y: 680) and clicking...")
+        # NEW STEP: EXACT LAYOUT ABSOLUTE COORDINATES CLICK
+        print("Moving hardware cursor to exact button center (X: 505, Y: 574)...")
         
-        # ActionChains browser window ke top-left (0,0) se screen pixels calculation karta hai
+        # move_to_location hamesha screen ke absolute top-left (0,0) se exact pixel par pointer le jata hai
         actions = ActionChains(driver)
-        actions.move_by_offset(960, 680).click().perform()
+        actions.move_to_location(505, 574).click().perform()
         
-        print("Physical click simulation done on fixed coordinates.")
+        print("Hardware-level absolute coordinate click executed successfully.")
         time.sleep(25) # Studio properly load hone ka wait
 
         # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
