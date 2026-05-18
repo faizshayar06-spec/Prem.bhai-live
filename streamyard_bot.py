@@ -4,10 +4,10 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
 GUEST_URL = "https://streamyard.com/6ihfwcdmwx" 
@@ -19,11 +19,13 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Permissions Bypass (FORCE FLAGS)
+    # Permissions & Automation Bypass
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    chrome_options.add_experimental_option('useAutomationExtension', False)
     chrome_options.add_experimental_option("prefs", {
         "profile.default_content_setting_values.media_stream_mic": 1, 
         "profile.default_content_setting_values.media_stream_camera": 1,
@@ -33,94 +35,85 @@ def start_stream():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
-    # Wait object (Max 30 seconds)
-    wait = WebDriverWait(driver, 30)
+    # Selenium explicitly wait time setup
+    wait = WebDriverWait(driver, 15)
     
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-
-        # STEP 1: INITIAL DIALOGS / COOKIES BYPASS
-        print("Bypassing initial dialogs/cookies if any...")
-        time.sleep(5)
-        try:
-            driver.execute_script("""
-                let buttons = Array.from(document.querySelectorAll('button'));
-                buttons.forEach(btn => {
-                    let txt = btn.innerText.toLowerCase();
-                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
-                        btn.click();
-                    }
-                });
-            """)
-        except Exception:
-            pass
-
-        # STEP 2: WAIT FOR NAME INPUT FIELD & TYPE 'Faiz'
-        print("Waiting for Display Name input field...")
-        name_input = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "input[name='name'], input[id*='name'], input[placeholder*='name'], input[type='text']"))
-        )
         
-        print("Input field found. Typing 'Faiz' safely...")
+        # --- STEP 1: COOKIES & INITIAL ALLOW BUTTONS ---
+        print("Checking for Initial Prompts / Cookies...")
+        time.sleep(5) 
         driver.execute_script("""
-            let inputField = arguments[0];
-            inputField.focus();
-            inputField.value = 'Faiz';
-            inputField.dispatchEvent(new Event('input', { bubbles: true }));
-            inputField.dispatchEvent(new Event('change', { bubbles: true }));
-            inputField.blur();
+            // Cookie banners ya initial modals ko click karne ke liye targeted logic
+            let setupButtons = Array.from(document.querySelectorAll('button, [role="button"]'));
+            let targetBtn = setupButtons.find(b => {
+                let t = b.innerText.toLowerCase();
+                return t.includes('accept') || t.includes('got it') || t.includes('cookies') || t.includes('allow');
+            });
+            if (targetBtn) {
+                targetBtn.click();
+                console.log('Initial overlay handled');
+            }
+        """)
+        
+        # --- STEP 2: NAME ENTRY & SYNC ---
+        print("Locating Display Name Field...")
+        # StreamYard unique attribute ya test id ka use karke text box target kiya hai
+        name_input = wait.until(EC.presence_of_element_located((
+            By.CSS_SELECTOR, "input[name='displayName'], input[placeholder*='name'], input[type='text']"
+        )))
+        
+        # Clear field and enter Urdu Name
+        name_input.clear()
+        print("Entering Name: فیض")
+        
+        # Pure JS execution text handling taaki field accurately trigger ho bina keyboard layout issues ke
+        driver.execute_script("""
+            arguments[0].value = 'فیض';
+            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
+            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
         """, name_input)
-        
-        print("Name 'Faiz' successfully registered in input box.")
-        time.sleep(3) # Pausing to make sure UI is updated
+        time.sleep(2)
 
-        # STEP 3: CLICK ENTER STUDIO BUTTON (SUPER SAFE BLOCK)
-        print("Attempting to handle 'Enter studio' phase...")
-        try:
-            # 1. Pehle pure JavaScript se hi directly dhoondh kar click karne ka try karte hain (Sabse best aur crash-proof)
-            driver.execute_script("""
-                let enterBtn = Array.from(document.querySelectorAll('button')).find(el => 
-                    el.textContent.includes('Enter studio') || el.innerText.includes('Enter studio')
-                );
-                if(enterBtn) {
-                    enterBtn.click();
-                    console.log('Clicked enter studio via JavaScript successfully.');
-                } else {
-                    throw new Error('Button not found via JS');
-                }
-            """)
-            print("Successfully entered studio via direct JavaScript injection.")
-            
-        except Exception as js_err:
-            print(f"JavaScript direct click skipped/failed ({js_err}). Trying Selenium method as backup...")
-            try:
-                # 2. Agar JS fail hua, tabhi yeh backup Selenium code chalega (Taki crash na ho)
-                enter_button = wait.until(
-                    EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]"))
-                )
-                enter_button.click()
-                print("Clicked via backup Selenium standard click.")
-            except Exception as selenium_err:
-                # 3. Agar dono fail ho jayein tab bhi script ko band nahi karna hai!
-                print(f"Selenium backup also timed out ({selenium_err}). But ignoring error to prevent crash!")
-        
-        print("Successfully bypassed enter studio phase check. Moving to stage loading...")
-        print("Waiting for Studio stage to load...")
-        time.sleep(25) # Studio properly load hone tak ka pause
-
-        # STEP 4: REPETITIVE AUTO-ADD TO STAGE
+        # --- STEP 3: CLICK ENTER STUDIO ---
+        print("Locating Enter Studio Button...")
+        # Exact step sequence validation: Name box filled hone ke baad button trigger hoga
         driver.execute_script("""
-            setInterval(() => {
+            let entryButtons = Array.from(document.querySelectorAll('button'));
+            let enterStudioBtn = entryButtons.find(el => 
+                el.textContent.includes('Enter studio') || 
+                el.textContent.includes('Enter Studio') ||
+                el.textContent.includes('Check your audio')
+            );
+            if(enterStudioBtn) {
+                enterStudioBtn.click();
+                console.log('Clicked Enter Studio');
+            } else {
+                // Fallback secondary click if standard name structure differs
+                let secondaryBtn = document.querySelector('button[type="submit"]');
+                if(secondaryBtn) secondaryBtn.click();
+            }
+        """)
+        
+        print("Waiting for Studio Interface to fully load...")
+        time.sleep(20) # Loop back streams ke load time aur stage management ko buffer dene ke liye
+
+        # --- STEP 4: STAGE PERSISTENCE (LOOP) ---
+        print("Starting Loop for 'Add to stage' enforcement...")
+        driver.execute_script("""
+            window.stageEnforcer = setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
                 let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
                 if (addBtn) {
                     addBtn.click();
+                    console.log('Enforced: Added to stage');
                 }
             }, 5000);
         """)
 
-        # FFmpeg Section
+        # --- STEP 5: FFMPEG STREAM TRANSMISSION ---
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -130,14 +123,18 @@ def start_stream():
             '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
         ]
         
+        print("Starting FFmpeg background pipe...")
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is successfully streaming. Check YouTube dashboard.")
+        print("Streaming active. Monitoring engine uptime...")
+        
+        # Stream window runtime (approx 5.9 hours)
         time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
-        print(f"Fatal Error occurred inside main script execution loop: {e}")
+        print(f"Execution Error Encountered: {e}")
     finally:
+        print("Closing browser context...")
         driver.quit()
 
 if __name__ == "__main__":
