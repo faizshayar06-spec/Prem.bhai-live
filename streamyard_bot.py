@@ -18,6 +18,7 @@ def start_stream():
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
+    chrome_options.add_argument("--headless=new")  # GitHub Actions ke liye headless mode secure rahega
     
     # Permissions & Automation Bypass
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
@@ -35,8 +36,8 @@ def start_stream():
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
     
-    # Selenium explicitly wait time setup
-    wait = WebDriverWait(driver, 15)
+    # GitHub Actions par thoda extra wait time (30 seconds max) secure rahega
+    wait = WebDriverWait(driver, 30)
     
     try:
         print("Opening StreamYard...")
@@ -44,9 +45,8 @@ def start_stream():
         
         # --- STEP 1: COOKIES & INITIAL ALLOW BUTTONS ---
         print("Checking for Initial Prompts / Cookies...")
-        time.sleep(5) 
+        time.sleep(8) # Elements ko background me load hone ka time diya
         driver.execute_script("""
-            // Cookie banners ya initial modals ko click karne ke liye targeted logic
             let setupButtons = Array.from(document.querySelectorAll('button, [role="button"]'));
             let targetBtn = setupButtons.find(b => {
                 let t = b.innerText.toLowerCase();
@@ -58,28 +58,33 @@ def start_stream():
             }
         """)
         
-        # --- STEP 2: NAME ENTRY & SYNC ---
+        # --- STEP 2: NAME ENTRY (FAIL-PROOF) ---
         print("Locating Display Name Field...")
-        # StreamYard unique attribute ya test id ka use karke text box target kiya hai
-        name_input = wait.until(EC.presence_of_element_located((
+        
+        # Change: Yahan presence_of_element_located ki jagah element_to_be_clickable use kiya hai
+        name_input = wait.until(EC.element_to_be_clickable((
             By.CSS_SELECTOR, "input[name='displayName'], input[placeholder*='name'], input[type='text']"
         )))
         
-        # Clear field and enter Urdu Name
+        # Element screen par click aur focal center me aaye, uske liye extra sleep aur click trigger
+        time.sleep(3)
+        name_input.click() 
         name_input.clear()
-        print("Entering Name: فیض")
         
-        # Pure JS execution text handling taaki field accurately trigger ho bina keyboard layout issues ke
+        print("Entering Name: فیض")
+        # Direct fallback pure JS input taaki 'not interactable' error completely bypass ho jaye
         driver.execute_script("""
-            arguments[0].value = 'فیض';
-            arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-            arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
+            let inputField = arguments[0];
+            inputField.focus();
+            inputField.value = 'فیض';
+            inputField.dispatchEvent(new Event('input', { bubbles: true }));
+            inputField.dispatchEvent(new Event('change', { bubbles: true }));
         """, name_input)
-        time.sleep(2)
+        
+        time.sleep(3) # Input dynamic register hone ka delay
 
         # --- STEP 3: CLICK ENTER STUDIO ---
         print("Locating Enter Studio Button...")
-        # Exact step sequence validation: Name box filled hone ke baad button trigger hoga
         driver.execute_script("""
             let entryButtons = Array.from(document.querySelectorAll('button'));
             let enterStudioBtn = entryButtons.find(el => 
@@ -91,14 +96,13 @@ def start_stream():
                 enterStudioBtn.click();
                 console.log('Clicked Enter Studio');
             } else {
-                // Fallback secondary click if standard name structure differs
                 let secondaryBtn = document.querySelector('button[type="submit"]');
                 if(secondaryBtn) secondaryBtn.click();
             }
         """)
         
         print("Waiting for Studio Interface to fully load...")
-        time.sleep(20) # Loop back streams ke load time aur stage management ko buffer dene ke liye
+        time.sleep(25) 
 
         # --- STEP 4: STAGE PERSISTENCE (LOOP) ---
         print("Starting Loop for 'Add to stage' enforcement...")
@@ -127,7 +131,6 @@ def start_stream():
         process = subprocess.Popen(ffmpeg_cmd)
         print("Streaming active. Monitoring engine uptime...")
         
-        # Stream window runtime (approx 5.9 hours)
         time.sleep(21300) 
         process.terminate()
 
