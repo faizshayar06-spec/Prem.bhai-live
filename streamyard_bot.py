@@ -4,6 +4,8 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -35,22 +37,23 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(10)
 
-        # STEP 1: COOKIES & CONTINUE BYPASS (Is loop ko control me lene ke liye window variable banaya hai)
+        # STEP 1: FORCE CLICK EVERYTHING (Timers are saved to window object)
         driver.execute_script("""
-            window.bypassManager = setInterval(function() {
+            function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
                 buttons.forEach(btn => {
                     let txt = btn.innerText.toLowerCase();
                     if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
                         btn.click();
-                        console.log('Bypassed loop event: ' + txt);
+                        console.log('Bypassed: ' + txt);
                     }
                 });
-            }, 2500);
+            }
+            clickAnything();
+            window.t1 = setTimeout(clickAnything, 3000);
+            window.t2 = setTimeout(clickAnything, 6000);
         """)
-        
-        # Safe wait jab tak naam wale page par na pahunche
-        time.sleep(12)
+        time.sleep(10)
 
         # STEP 2: NAME ENTRY ONLY (Aapka original 100% working code - UNTOUCHED)
         print("Filling English name in the input field...")
@@ -67,21 +70,20 @@ def start_stream():
             }
         """)
         
-        # NAAM LIKHNE KE THIK BAAD - PURANI JAVASCRIPT KO ROKNA
-        print("Stopping previous background JavaScript loops to freeze the name state...")
+        # STEP 2.1: PURANE JAVA WORKFLOW KO POORI TARAH STOP KARNA
+        print("Killing previous background timeouts to secure name field state...")
         driver.execute_script("""
-            if (window.bypassManager) {
-                clearInterval(window.bypassManager);
-                console.log('Background bypass loop successfully stopped!');
-            }
+            clearTimeout(window.t1);
+            clearTimeout(window.t2);
+            console.log('All initial background scripts destroyed successfully.');
         """)
         
-        # Ab state freeze ho chuki hai, 3 second ka wait taaki form button blue ho jaye
-        time.sleep(3) 
+        time.sleep(2) # State freeze karne ke liye chhota buffer wait
 
-        # STEP 3: MANUALLY FORM ENTER CLICK (Bina JS interference ke safe submission)
-        print("Executing clean Enter Studio execution...")
+        # STEP 2.2: FORCEFULLY CLICK ENTER STUDIO VIA NATIVE KEYSTROKE OR BUTTON ACTION
+        print("Executing clean manual Enter Studio action via JavaScript...")
         driver.execute_script("""
+            let nameInput = document.getElementById('name') || document.querySelector('input');
             let buttons = Array.from(document.querySelectorAll('button'));
             let enterBtn = buttons.find(el => 
                 el.textContent.includes('Enter studio') || 
@@ -89,23 +91,20 @@ def start_stream():
                 el.getAttribute('type') === 'submit'
             );
             
-            if(enterBtn) {
+            if (enterBtn) {
                 enterBtn.click();
-                console.log('Studio entered cleanly.');
-            } else {
-                // Agar button direct click kaam na kare toh native HTML submit trigger karo
-                let nameInput = document.getElementById('name') || document.querySelector('input');
-                if(nameInput) {
-                    let form = nameInput.closest('form');
-                    if(form) form.submit();
-                }
+                console.log('Enter Studio button force clicked.');
+            } else if (nameInput) {
+                // Agar button target na ho paye, toh active element par form submit push karo
+                let form = nameInput.closest('form');
+                if(form) form.submit();
             }
         """)
         
-        print("Successfully sent enter command. Syncing with studio lobby...")
-        time.sleep(25) 
+        print("Bypass operation done. Transitioning to inside the studio...")
+        time.sleep(25) # Studio properly load hone tak ka wait
 
-        # STEP 4: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
