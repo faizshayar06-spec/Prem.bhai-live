@@ -4,7 +4,6 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -72,14 +71,45 @@ def start_stream():
         # Naam entry hone ke baad safe update delay
         time.sleep(3)
 
-        # NEW STEP: EXACT LAYOUT ABSOLUTE COORDINATES CLICK
-        print("Moving hardware cursor to exact button center (X: 505, Y: 574)...")
+        # NEW STEP: NATIVE JAVASCRIPT FIXED COORDINATES HARD-CLICK BYPASS
+        print("Forcing direct browser-level click on exact coordinates (X: 505, Y: 574)...")
+        driver.execute_script("""
+            // Browser window ke absolute coordinates (505, 574) par element ko target karna
+            let targetElement = document.elementFromPoint(505, 574) || document.body;
+            
+            // Raw physical mouse events taiyar karna
+            let mouseDownEvent = new MouseEvent('mousedown', {
+                clientX: 505,
+                clientY: 574,
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+            
+            let mouseUpEvent = new MouseEvent('mouseup', {
+                clientX: 505,
+                clientY: 574,
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+
+            let clickEvent = new MouseEvent('click', {
+                clientX: 505,
+                clientY: 574,
+                bubbles: true,
+                cancelable: true,
+                view: window
+            });
+
+            // Sequence wise click ko trigger karna taaki button security bypass ho sake
+            targetElement.dispatchEvent(mouseDownEvent);
+            targetElement.dispatchEvent(mouseUpEvent);
+            targetElement.dispatchEvent(clickEvent);
+            console.log('Direct absolute position coordinate click triggered successfully.');
+        """)
         
-        # move_to_location hamesha screen ke absolute top-left (0,0) se exact pixel par pointer le jata hai
-        actions = ActionChains(driver)
-        actions.move_to_location(505, 574).click().perform()
-        
-        print("Hardware-level absolute coordinate click executed successfully.")
+        print("Coordinate click executed. Loading studio room workspace...")
         time.sleep(25) # Studio properly load hone ka wait
 
         # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
