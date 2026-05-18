@@ -35,40 +35,49 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(5)
 
-        # STEP-BY-STEP SEQUENTIAL MASTER JAVASCRIPT CONTROLLER
-        print("Deploying Strict Step-by-Step State Machine...")
+        # NEW MASTER CONTROL: OVERLAY BYPASS & STEP-BY-STEP CONTROLLER
+        print("Deploying Strict Step-by-Step State Machine with Permission Override...")
         driver.execute_script("""
+            // Force browser API level permissions bypass
+            if (navigator.permissions && navigator.permissions.query) {
+                navigator.permissions.query = (auth) => {
+                    return Promise.resolve({ state: 'granted', onchange: null });
+                };
+            }
+
             let currentStep = 1; 
             console.log('Sequential State Engine Active.');
 
             let masterSequence = setInterval(() => {
                 let buttons = Array.from(document.querySelectorAll('button'));
                 
-                // OPTIONAL FAIL-SAFE: Baar-baar cookies check karna agar beech me aaye toh
+                // BACKUP: Cookies clear check
                 let cookieBtn = buttons.find(b => {
                     let t = b.innerText.toLowerCase();
                     return t.includes('accept all') || t.includes('accept cookies') || t.includes('all cookies');
                 });
                 if (cookieBtn) {
                     cookieBtn.click();
-                    console.log('Cookies cleared in background.');
                 }
 
-                // STEP 1: CLICK "ALLOW MIC/CAM ACCESS" BUTTON (Screenshot stage)
+                # STEP 1: FORCE OVERRIDE "ALLOW MIC/CAM ACCESS"
                 if (currentStep === 1) {
                     let allowBtn = buttons.find(b => {
                         let t = b.innerText.toLowerCase();
-                        return t.includes('allow mic/cam access') || t.includes('allow mic') || t.includes('allow access') || t.includes('continue');
+                        return t.includes('allow mic/cam') || t.includes('allow mic') || t.includes('allow access') || t.includes('continue');
                     });
                     
                     if (allowBtn) {
+                        allowBtn.focus();
                         allowBtn.click();
-                        console.log('Step 1 Complete: Clicked Allow mic/cam access button!');
-                        currentStep = 2; // Agle step par shift ho jao
+                        console.log('Step 1: Clicked Allow mic/cam access.');
                     }
+                    
+                    // Fail-safe: 3 second baad agle step par automatically push karega agar overlay change na ho
+                    setTimeout(() => { currentStep = 2; }, 3000);
                 }
 
-                // STEP 2: WAIT FOR NAME FIELD TO RENDER & FILL NAME (Aapka untouched 100% working login trigger)
+                # STEP 2: NAME FIELD INJECTION (Aapka untouched working login block)
                 if (currentStep === 2) {
                     let nameInput = document.getElementById('name') || 
                                     document.querySelector('input[placeholder*="name"]') || 
@@ -78,12 +87,12 @@ def start_stream():
                         nameInput.value = 'Faiz'; 
                         nameInput.dispatchEvent(new Event('input', { bubbles: true }));
                         nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        console.log('Step 2 Complete: Name successfully filled with Faiz without dropping state.');
-                        currentStep = 3; // Click phase par move karo
+                        console.log('Step 2: Name filled with Faiz securely.');
+                        currentStep = 3;
                     }
                 }
 
-                // STEP 3: SAFELY TRIGGER ENTER STUDIO BUTTON AFTER VALIDATION
+                # STEP 3: RE-ENABLE BUTTON & FORCE CLICK ENTER STUDIO
                 if (currentStep === 3) {
                     setTimeout(() => {
                         let enterBtn = buttons.find(el => 
@@ -93,22 +102,26 @@ def start_stream():
                         );
                         
                         if (enterBtn) {
+                            // Agar button browser restriction ki wajah se disabled lock hai, toh use force unlock karo
+                            enterBtn.removeAttribute('disabled');
+                            enterBtn.disabled = false;
+                            
                             enterBtn.focus();
                             enterBtn.click();
-                            console.log('Step 3 Complete: Force Clicked Enter Studio button clean!');
-                            clearInterval(masterSequence); // Poora logic successfully run ho gaya, loop destroy karo!
+                            console.log('Step 3: Forced unlock and Clicked Enter Studio button!');
+                            clearInterval(masterSequence); // Sequence over, stop loop!
                         }
-                    }, 2000); // 2 second ka gap naam stable karne ke liye
+                    }, 2000); // 2 second pause state transition ke liye
                     currentStep = 4;
                 }
 
-            }, 1500); // Har 1.5 second me logic array evaluate hoga step-by-step
+            }, 1500);
         """)
         
-        print("Sequential controller is processing the steps... Redirecting to studio lobby.")
-        time.sleep(35) # Live room aur workspace fully render hone tak ka wait time
+        print("Sequence engine is successfully handling stages. Transitioning to studio workspace...")
+        time.sleep(35) # Live room workspace render hone tak ka wait time
 
-        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' LOOP POORI TARAH YAHA SE DETACHED HAI.
+        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' LOOP COMPLETELY DETACHED HAI
 
         # FFmpeg Section
         ffmpeg_cmd = [
@@ -121,7 +134,7 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Pipeline streaming active. Monitor YouTube Dashboard.")
+        print("Streaming sequence activated inside studio. Track YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
