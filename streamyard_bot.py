@@ -4,6 +4,9 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -35,63 +38,59 @@ def start_stream():
         driver.get(GUEST_URL)
         time.sleep(5)
 
-        # STEP 1 & 2: SINGLE MAIN LOOP (Bypass -> Fill Name -> Wait -> Enter Studio)
-        print("Running unified JavaScript workflow loop...")
+        # STEP 1: BACKGROUND POPUP CLEARER (JavaScript background me chalta rahega)
+        print("Starting background popup clearer...")
         driver.execute_script("""
-            let nameFilled = false;
-            let studioEntered = false;
-
-            let mainWorkflow = setInterval(() => {
-                // 1. Sabse pehle check karo kya Display Name box aa gaya hai?
+            window.popupClearerInterval = setInterval(() => {
                 let nameInput = document.getElementById('name') || 
                                 document.querySelector('input[placeholder*="name"]') || 
                                 document.querySelector('input[type="text"]');
                 
-                if (nameInput) {
-                    // Agar name input mil gaya aur abhi tak naam nahi likha hai, toh naam likho
-                    if (!nameFilled) {
-                        nameInput.focus();
-                        nameInput.value = 'Faiz';
-                        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        console.log('Name field filled with Faiz.');
-                        nameFilled = true;
-
-                        # Naam likhne ke thik 3 second baad Enter Studio par click hoga
-                        setTimeout(() => {
-                            let buttons = Array.from(document.querySelectorAll('button'));
-                            let enterBtn = buttons.find(el => 
-                                el.textContent.includes('Enter studio') || 
-                                el.textContent.includes('Enter') ||
-                                el.getAttribute('type') === 'submit'
-                            );
-                            
-                            if (enterBtn && !studioEntered) {
-                                enterBtn.click();
-                                console.log('Successfully clicked Enter Studio!');
-                                studioEntered = true;
-                                clearInterval(mainWorkflow); // Kaam poora hone par loop band karo
-                            }
-                        }, 3000);
-                    }
-                } else {
-                    // 2. Agar naam wala box nahi aaya, toh raste ke baaki buttons (Cookies/Continue) clear karo
+                // Agar naam wala box abhi tak nahi aaya, tabhi tak baaki buttons click karo
+                if (!nameInput) {
                     let buttons = Array.from(document.querySelectorAll('button'));
                     buttons.forEach(btn => {
                         let txt = btn.innerText.toLowerCase();
                         if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
                             btn.click();
-                            console.log('Force Clicked Element: ' + txt);
+                            console.log('Cleared overlay button: ' + txt);
                         }
                     });
+                } else {
+                    // Jab naam ka box mil jaye, toh popups hatana band kar do taaki input refresh na ho
+                    clearInterval(window.popupClearerInterval);
                 }
-            }, 2000); // Har 2 second mein poori screen scan hogi
+            }, 1500);
         """)
-        
-        print("Waiting for studio entry to complete...")
-        time.sleep(35) # Studio ke andar set hone ka safe wait time
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
+        # STEP 2: NATIVE PYTHON NAME ENTRY (Yeh 100% naam likhega hi likhega)
+        print("Waiting for Name Input field via Selenium native locator...")
+        
+        # Maximize wait time up to 30 seconds jab tak input box real me screen par visible na ho jaye
+        wait = WebDriverWait(driver, 30)
+        name_field = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, "input[placeholder*='name'], input#name, input[type='text']")))
+        
+        print("Name field detected! Typing name using native keys...")
+        time.sleep(2) # Stabilize hone ke liye chhota wait
+        
+        name_field.click() # Element par physically click karo
+        name_field.clear() # Agar pehle se kuch kachra likha ho toh clear karo
+        name_field.send_keys("Faiz") # Keyboard emulation se 'Faiz' type karo (Yeh kabhi fail nahi hota)
+        
+        print("Name filled successfully. Waiting 3 seconds for React validation...")
+        time.sleep(3)
+
+        # STEP 3: NATIVE ENTER STUDIO CLICK
+        print("Locating Enter Studio button...")
+        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Enter studio') or contains(text(), 'Enter') or @type='submit']")))
+        
+        print("Clicking Enter Studio button natively...")
+        enter_button.click()
+        
+        print("Waiting for studio environment to load fully...")
+        time.sleep(30) 
+
+        # STEP 4: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar)
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -118,7 +117,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error encountered: {e}")
     finally:
         driver.quit()
 
