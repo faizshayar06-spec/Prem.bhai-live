@@ -1,11 +1,11 @@
 import os
 import time
 import subprocess
+import traceback
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
@@ -17,60 +17,116 @@ STREAM_KEY = os.getenv("YT_STREAM_KEY")
 def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
-    chrome_options.add_argument("--use-fake-ui-for-media-stream")
     
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    wait = WebDriverWait(driver, 20)
+    # Permissions Bypass
+    chrome_options.add_argument("--use-fake-ui-for-media-stream")
+    chrome_options.add_argument("--use-fake-device-for-media-stream")
+    chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
+    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_experimental_option("prefs", {
+        "profile.default_content_setting_values.media_stream_mic": 1, 
+        "profile.default_content_setting_values.media_stream_camera": 1,
+        "profile.default_content_setting_values.notifications": 1
+    })
+
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service, options=chrome_options)
+    wait = WebDriverWait(driver, 20) 
     
     try:
+        print("Opening StreamYard...")
         driver.get(GUEST_URL)
 
-        # Login/Name Flow
-        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
-        name_input.send_keys("Faiz")
-        
-        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//button[contains(., 'Enter studio')]")))
-        enter_button.click()
-        
-        print("Studio mein enter ho gaye, 10 seconds wait kar rahe hain...")
-        time.sleep(10) 
-
-        # --- EXACT COORDINATE CLICKER (Maximize Button) ---
-        # 1920x1080 Screen par icon ki exact position
-        # X: 1880 (Right edge), Y: 565 (Video area ka bottom right)
-        def click_at_exact_position(driver):
-            actions = ActionChains(driver)
-            # Mouse ko screen ke corner par le jaakar click
-            actions.move_by_offset(1880, 565).click().perform()
-            # Mouse ko reset karna zaroori hai taaki agli baar coordinate sahi rahe
-            actions.move_by_offset(-1880, -565).perform()
-            print("Maximize button clicked at 1880, 565")
-
-        # Isse loop mein daal diya taaki agar button hat jaye to phir click ho
+        # STEP 1: FORCE CLICK POPUPS
         driver.execute_script("""
-            setInterval(function() {
-                console.log("Attempting coordinate click...");
-            }, 5000);
+            function clickAnything() {
+                let buttons = Array.from(document.querySelectorAll('button'));
+                buttons.forEach(btn => {
+                    let txt = btn.innerText.toLowerCase();
+                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                        btn.click();
+                    }
+                });
+            }
+            setInterval(clickAnything, 2000); 
         """)
-        click_at_exact_position(driver)
+        
+        # STEP 2: NAME & ENTER STUDIO
+        print("Waiting for Name input field...")
+        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
+        name_input.clear()
+        name_input.send_keys("Faiz")
+        time.sleep(2) 
 
-        # FFmpeg
+        print("Hunting for the 'Enter studio' button...")
+        enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
+        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
+        enter_button.click()
+        print("Successfully bypassed and entered the Studio! 🥀")
+
+        # Studio load hone ka thoda wait karein
+        time.sleep(10)
+
+        # STEP 3: AUTO ADD TO STAGE & MAXIMIZE (F12 / INSPECT METHOD)
+        # Ye script background me chalti rahegi, Add to stage bhi karegi aur Maximize bhi
+        print("Injecting F12/JS based Add to Stage and Maximize script...")
+        driver.execute_script("""
+            setInterval(() => {
+                // 1. Add to stage logic
+                let btns = Array.from(document.querySelectorAll('button'));
+                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
+                if (addBtn) {
+                    addBtn.click();
+                    console.log("Clicked: Add to stage");
+                }
+
+                // 2. MAXIMIZE BUTTON LOGIC (Direct HTML/CSS Selector)
+                // Streamyard me maximize button par aria-label laga hota hai
+                let maxBtn = document.querySelector('button[aria-label="Maximize"]') || 
+                             document.querySelector('button[aria-label="Full screen"]') ||
+                             document.querySelector('button[aria-label="Enter full screen"]');
+                
+                if (maxBtn) {
+                    // React components me direct click kabhi kabhi kaam nahi karta, isliye MouseEvent use kar rahe hain
+                    let ev = new MouseEvent('click', {
+                        view: window,
+                        bubbles: true,
+                        cancelable: true
+                    });
+                    maxBtn.dispatchEvent(ev);
+                    console.log("Successfully Clicked Maximize / Full Screen!");
+                }
+            }, 5000); // Har 5 second me check karega
+        """)
+
+        # STEP 4: START STREAMING
         print("Starting FFmpeg rendering...")
         ffmpeg_cmd = [
-            'ffmpeg', '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
-            '-f', 'pulse', '-i', 'default', '-c:v', 'libx264', '-preset', 'veryfast', 
-            '-b:v', '4000k', '-pix_fmt', 'yuv420p', '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
+            'ffmpeg',
+            '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
+            '-f', 'pulse', '-i', 'default',
+            '-c:v', 'libx264', '-preset', 'veryfast', '-b:v', '4000k',
+            '-pix_fmt', 'yuv420p',
+            '-f', 'flv', f'rtmp://a.rtmp.youtube.com/live2/{STREAM_KEY}'
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
+        print("Bot is LIVE and Streaming for 6 Hours! Check YouTube dashboard.")
+        
+        # 21300 seconds (almost 6 hours) tak stream chalega
         time.sleep(21300) 
+        
         process.terminate()
 
     except Exception as e:
-        print(f"Error encountered: {e}")
+        print("Bhai ek Error aayi hai, neeche detail dekho:")
+        # Ye line exact error batayegi GitHub Actions ke log me, taki future me debug karne me aasaani ho
+        traceback.print_exc() 
     finally:
         driver.quit()
+        print("Script finished and driver closed.")
 
 if __name__ == "__main__":
     start_stream()
