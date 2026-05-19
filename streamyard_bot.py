@@ -1,13 +1,9 @@
 import os
 import time
 import subprocess
-import traceback
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -20,7 +16,7 @@ def start_stream():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
     
-    # Permissions Bypass
+    # Permissions Bypass (FORCE FLAGS)
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
@@ -33,13 +29,13 @@ def start_stream():
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    wait = WebDriverWait(driver, 20) 
     
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
+        time.sleep(10)
 
-        # STEP 1: FORCE CLICK POPUPS
+        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -47,69 +43,49 @@ def start_stream():
                     let txt = btn.innerText.toLowerCase();
                     if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
                         btn.click();
+                        console.log('Bypassed: ' + txt);
                     }
                 });
             }
-            setInterval(clickAnything, 2000); 
+            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
+            clickAnything();
+            setTimeout(clickAnything, 3000);
+            setTimeout(clickAnything, 6000);
         """)
-        
-        # STEP 2: NAME & ENTER STUDIO
-        print("Waiting for popups to clear before finding input...")
-        time.sleep(4) # Thoda time diya taaki popups hat jayein
-        
-        print("Hunting for Name input field...")
-        # element_to_be_clickable use kar rahe hain taaki ready hone par hi click kare
-        name_input = wait.until(EC.element_to_be_clickable((By.XPATH, "//input")))
-        
-        # FIX: Normal .clear() hata diya jo error de raha tha. JS se forcefully focus aur type karenge.
-        driver.execute_script("arguments[0].focus();", name_input)
-        driver.execute_script("arguments[0].value = 'Faiz';", name_input)
-        # React ko batane ke liye ki kuch type hua hai, event dispatch karenge
-        driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", name_input)
-        
-        print("Name 'Faiz' successfully typed via JS...")
-        time.sleep(2) 
-
-        print("Hunting for the 'Enter studio' button...")
-        enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
-        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
-        enter_button.click()
-        print("Successfully bypassed and entered the Studio! 🥀")
-
-        # Studio load hone ka wait
         time.sleep(10)
 
-        # STEP 3: AUTO ADD TO STAGE & MAXIMIZE (F12 METHOD)
-        print("Injecting F12/JS based Add to Stage and Maximize script...")
+        # STEP 2: NAME ENTRY ONLY (Auto-click hata diya hai, sirf English naam fill hoga)
+        print("Filling English name in the input field...")
+        driver.execute_script("""
+            let nameInput = document.getElementById('name') || 
+                            document.querySelector('input[placeholder*="name"]') || 
+                            document.querySelector('input');
+            if(nameInput) {
+                nameInput.focus();
+                nameInput.value = 'Faiz'; // Sirf English naam set kiya hai
+                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+                nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log('Name field locked and filled with Faiz.');
+            }
+            // AUTO CLICK ENTER STUDIO WALA CODE YAHA SE UTAR DIYA HAI.
+        """)
+        
+        print("Bot has filled the name. Now waiting for your manual entry click...")
+        # Yahan script wait karegi taaki aap manually click karke studio ke andar chale jayein
+        time.sleep(25) 
+
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
         driver.execute_script("""
             setInterval(() => {
-                // 1. Add to stage logic
                 let btns = Array.from(document.querySelectorAll('button'));
                 let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
                 if (addBtn) {
                     addBtn.click();
-                    console.log("Clicked: Add to stage");
                 }
-
-                // 2. MAXIMIZE BUTTON LOGIC
-                let maxBtn = document.querySelector('button[aria-label="Maximize"]') || 
-                             document.querySelector('button[aria-label="Full screen"]') ||
-                             document.querySelector('button[aria-label="Enter full screen"]');
-                
-                if (maxBtn) {
-                    let ev = new MouseEvent('click', {
-                        view: window,
-                        bubbles: true,
-                        cancelable: true
-                    });
-                    maxBtn.dispatchEvent(ev);
-                    console.log("Successfully Clicked Maximize / Full Screen!");
-                }
-            }, 5000); 
+            }, 5000);
         """)
 
-        # STEP 4: START STREAMING
-        print("Starting FFmpeg rendering...")
+        # FFmpeg
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -120,19 +96,14 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Bot is LIVE and Streaming for 6 Hours! Check YouTube dashboard.")
-        
+        print("Bot is doing its job. Check YouTube dashboard.")
         time.sleep(21300) 
-        
         process.terminate()
 
     except Exception as e:
-        print("Bhai ek Error aayi hai, neeche detail dekho:")
-        traceback.print_exc() 
+        print(f"Error: {e}")
     finally:
         driver.quit()
-        print("Script finished and driver closed.")
 
 if __name__ == "__main__":
     start_stream()
-    
