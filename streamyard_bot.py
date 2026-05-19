@@ -54,10 +54,20 @@ def start_stream():
         """)
         
         # STEP 2: NAME & ENTER STUDIO
-        print("Waiting for Name input field...")
-        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
-        name_input.clear()
-        name_input.send_keys("Faiz")
+        print("Waiting for popups to clear before finding input...")
+        time.sleep(4) # Thoda time diya taaki popups hat jayein
+        
+        print("Hunting for Name input field...")
+        # element_to_be_clickable use kar rahe hain taaki ready hone par hi click kare
+        name_input = wait.until(EC.element_to_be_clickable((By.XPATH, "//input")))
+        
+        # FIX: Normal .clear() hata diya jo error de raha tha. JS se forcefully focus aur type karenge.
+        driver.execute_script("arguments[0].focus();", name_input)
+        driver.execute_script("arguments[0].value = 'Faiz';", name_input)
+        # React ko batane ke liye ki kuch type hua hai, event dispatch karenge
+        driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", name_input)
+        
+        print("Name 'Faiz' successfully typed via JS...")
         time.sleep(2) 
 
         print("Hunting for the 'Enter studio' button...")
@@ -66,11 +76,10 @@ def start_stream():
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
-        # Studio load hone ka thoda wait karein
+        # Studio load hone ka wait
         time.sleep(10)
 
-        # STEP 3: AUTO ADD TO STAGE & MAXIMIZE (F12 / INSPECT METHOD)
-        # Ye script background me chalti rahegi, Add to stage bhi karegi aur Maximize bhi
+        # STEP 3: AUTO ADD TO STAGE & MAXIMIZE (F12 METHOD)
         print("Injecting F12/JS based Add to Stage and Maximize script...")
         driver.execute_script("""
             setInterval(() => {
@@ -82,14 +91,12 @@ def start_stream():
                     console.log("Clicked: Add to stage");
                 }
 
-                // 2. MAXIMIZE BUTTON LOGIC (Direct HTML/CSS Selector)
-                // Streamyard me maximize button par aria-label laga hota hai
+                // 2. MAXIMIZE BUTTON LOGIC
                 let maxBtn = document.querySelector('button[aria-label="Maximize"]') || 
                              document.querySelector('button[aria-label="Full screen"]') ||
                              document.querySelector('button[aria-label="Enter full screen"]');
                 
                 if (maxBtn) {
-                    // React components me direct click kabhi kabhi kaam nahi karta, isliye MouseEvent use kar rahe hain
                     let ev = new MouseEvent('click', {
                         view: window,
                         bubbles: true,
@@ -98,7 +105,7 @@ def start_stream():
                     maxBtn.dispatchEvent(ev);
                     console.log("Successfully Clicked Maximize / Full Screen!");
                 }
-            }, 5000); // Har 5 second me check karega
+            }, 5000); 
         """)
 
         # STEP 4: START STREAMING
@@ -115,14 +122,12 @@ def start_stream():
         process = subprocess.Popen(ffmpeg_cmd)
         print("Bot is LIVE and Streaming for 6 Hours! Check YouTube dashboard.")
         
-        # 21300 seconds (almost 6 hours) tak stream chalega
         time.sleep(21300) 
         
         process.terminate()
 
     except Exception as e:
         print("Bhai ek Error aayi hai, neeche detail dekho:")
-        # Ye line exact error batayegi GitHub Actions ke log me, taki future me debug karne me aasaani ho
         traceback.print_exc() 
     finally:
         driver.quit()
