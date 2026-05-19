@@ -4,6 +4,9 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -29,13 +32,13 @@ def start_stream():
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    wait = WebDriverWait(driver, 20) # 20 seconds max wait time
     
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(10)
 
-        # STEP 1: FORCE CLICK EVERYTHING (Cookies, Continue, Allow bypass karne ke liye JavaScript)
+        # STEP 1: FORCE CLICK POPUPS (Cookies, Continue, Allow)
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -47,34 +50,34 @@ def start_stream():
                     }
                 });
             }
-            // 3 baar check karega intervals mein taaki welcome screens clear ho jayein
-            clickAnything();
-            setTimeout(clickAnything, 3000);
-            setTimeout(clickAnything, 6000);
-        """)
-        time.sleep(10)
-
-        # STEP 2: NAME ENTRY ONLY (Auto-click hata diya hai, sirf English naam fill hoga)
-        print("Filling English name in the input field...")
-        driver.execute_script("""
-            let nameInput = document.getElementById('name') || 
-                            document.querySelector('input[placeholder*="name"]') || 
-                            document.querySelector('input');
-            if(nameInput) {
-                nameInput.focus();
-                nameInput.value = 'Faiz'; // Sirf English naam set kiya hai
-                nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-                nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log('Name field locked and filled with Faiz.');
-            }
-            // AUTO CLICK ENTER STUDIO WALA CODE YAHA SE UTAR DIYA HAI.
+            setInterval(clickAnything, 2000); // Har 2 sec me check karega
         """)
         
-        print("Bot has filled the name. Now waiting for your manual entry click...")
-        # Yahan script wait karegi taaki aap manually click karke studio ke andar chale jayein
-        time.sleep(25) 
+        # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
+        print("Waiting for Name input field...")
+        
+        # Find input using explicit wait
+        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
+        name_input.clear()
+        
+        # Native typing to bypass React state protection
+        print("Typing name as a real human...")
+        name_input.send_keys("Faiz")
+        time.sleep(1) # React ko state register karne ka time diya
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE (Studio ke andar jane ke baad kaam karega)
+        # Hunting the "Enter Studio" button robustly (case-insensitive)
+        print("Hunting for the 'Enter studio' button...")
+        enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
+        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
+        
+        # Click it
+        enter_button.click()
+        print("Successfully bypassed and entered the Studio! 🥀")
+
+        # Wait to load into the studio completely
+        time.sleep(5)
+
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
@@ -86,6 +89,7 @@ def start_stream():
         """)
 
         # FFmpeg
+        print("Starting FFmpeg rendering...")
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -101,7 +105,7 @@ def start_stream():
         process.terminate()
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error encountered: {e}")
     finally:
         driver.quit()
 
