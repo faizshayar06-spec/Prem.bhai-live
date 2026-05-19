@@ -1,7 +1,5 @@
 import os
 import time
-import os
-import time
 import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -58,14 +56,21 @@ def start_stream():
         # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
         print("Waiting for Name input field...")
         
-        # Find input using explicit wait
-        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
+        # Thoda extra wait dete hain taaki Streamyard ke overlays/animations khatam ho jaye
+        time.sleep(3)
+        
+        # presence_of_element_located ki jagah element_to_be_clickable use karenge 
+        # aur type='text' laga kar specific input target karenge
+        name_input = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='text']")))
+        
+        # Focus lane ke liye pehle click karte hain
+        name_input.click()
         name_input.clear()
         
         # Native typing to bypass React state protection
         print("Typing name as a real human...")
         name_input.send_keys("Faiz")
-        time.sleep(1) # React ko state register karne ka time diya
+        time.sleep(2) # React ko state register karne ka time diya
 
         # Hunting the "Enter Studio" button robustly (case-insensitive)
         print("Hunting for the 'Enter studio' button...")
