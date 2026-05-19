@@ -53,9 +53,9 @@ def start_stream():
             setInterval(clickAnything, 2000); // Har 2 sec me check karega
         """)
         
-        # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
+        # STEP 2: ULTIMATE JS BYPASS FOR NAME & ENTER STUDIO
         print("Waiting for Name input field...")
-        time.sleep(5) # 5 seconds diya taaki page puri tarah load ho jaye
+        time.sleep(5) 
         
         # Find input 
         try:
@@ -63,17 +63,10 @@ def start_stream():
         except:
             name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
         
-        # JS ke through clear karenge (Invalid Element State bypass)
-        driver.execute_script("arguments[0].scrollIntoView(true);", name_input)
-        driver.execute_script("arguments[0].focus();", name_input)
-        driver.execute_script("arguments[0].value = '';", name_input)
-        time.sleep(1)
+        print("Injecting name via JavaScript to bypass interactability block...")
         
-        # Native typing
-        print("Typing name as a real human...")
-        name_input.send_keys("Faiz")
-        
-        # React ko input register karwane ke liye JS event trigger
+        # JS INJECTION - Yeh `element not interactable` ka baap hai. Seedha HTML value change karega.
+        driver.execute_script("arguments[0].value = 'Faiz';", name_input)
         driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", name_input)
         driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", name_input)
         time.sleep(3) 
@@ -83,7 +76,7 @@ def start_stream():
         enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
         enter_button = wait.until(EC.presence_of_element_located((By.XPATH, enter_button_xpath)))
         
-        # Click using Javascript to force click even if slightly overlapped
+        # Click using Javascript to force click
         driver.execute_script("arguments[0].click();", enter_button)
         print("Successfully bypassed and entered the Studio! 🥀")
 
