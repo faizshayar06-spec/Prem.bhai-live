@@ -55,30 +55,36 @@ def start_stream():
         
         # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
         print("Waiting for Name input field...")
+        time.sleep(5) # 5 seconds diya taaki page puri tarah load ho jaye
         
-        # Thoda extra wait dete hain taaki Streamyard ke overlays/animations khatam ho jaye
-        time.sleep(3)
+        # Find input 
+        try:
+            name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input[@type='text']")))
+        except:
+            name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
         
-        # presence_of_element_located ki jagah element_to_be_clickable use karenge 
-        # aur type='text' laga kar specific input target karenge
-        name_input = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@type='text']")))
+        # JS ke through clear karenge (Invalid Element State bypass)
+        driver.execute_script("arguments[0].scrollIntoView(true);", name_input)
+        driver.execute_script("arguments[0].focus();", name_input)
+        driver.execute_script("arguments[0].value = '';", name_input)
+        time.sleep(1)
         
-        # Focus lane ke liye pehle click karte hain
-        name_input.click()
-        name_input.clear()
-        
-        # Native typing to bypass React state protection
+        # Native typing
         print("Typing name as a real human...")
         name_input.send_keys("Faiz")
-        time.sleep(2) # React ko state register karne ka time diya
+        
+        # React ko input register karwane ke liye JS event trigger
+        driver.execute_script("arguments[0].dispatchEvent(new Event('input', { bubbles: true }));", name_input)
+        driver.execute_script("arguments[0].dispatchEvent(new Event('change', { bubbles: true }));", name_input)
+        time.sleep(3) 
 
-        # Hunting the "Enter Studio" button robustly (case-insensitive)
+        # Hunting the "Enter Studio" button robustly
         print("Hunting for the 'Enter studio' button...")
         enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
-        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
+        enter_button = wait.until(EC.presence_of_element_located((By.XPATH, enter_button_xpath)))
         
-        # Click it
-        enter_button.click()
+        # Click using Javascript to force click even if slightly overlapped
+        driver.execute_script("arguments[0].click();", enter_button)
         print("Successfully bypassed and entered the Studio! 🥀")
 
         # Wait to load into the studio completely
