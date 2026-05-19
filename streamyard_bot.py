@@ -77,7 +77,30 @@ def start_stream():
         # Wait to load into the studio completely
         time.sleep(5)
 
-        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
+        # STEP 3: MAXIMIZE THE STUDIO SCREEN
+        print("Maximizing the studio screen... 🖥️")
+        driver.execute_script("""
+            // Ye script us button ko dhoondegi jiska naam fullscreen ya maximize se related ho
+            let maximizeBtns = document.querySelectorAll('[aria-label*="fullscreen" i], [aria-label*="maximize" i], [title*="fullscreen" i], [title*="maximize" i]');
+            
+            if (maximizeBtns.length > 0) {
+                maximizeBtns[0].click();
+                console.log("Studio screen maximized!");
+            } else {
+                // Agar direct label nahi mila, toh SVG icons ke parent buttons ko check karega
+                let buttons = document.querySelectorAll('button');
+                for (let btn of buttons) {
+                    if (btn.innerHTML.toLowerCase().includes('fullscreen') || btn.innerHTML.toLowerCase().includes('maximize')) {
+                        btn.click();
+                        break;
+                    }
+                }
+            }
+        """)
+        time.sleep(2) # Maximize hone ke baad thoda time do
+
+        # STEP 4: REPETITIVE AUTO-ADD TO STAGE
+        print("Activating Auto-Add to Stage script...")
         driver.execute_script("""
             setInterval(() => {
                 let btns = Array.from(document.querySelectorAll('button'));
