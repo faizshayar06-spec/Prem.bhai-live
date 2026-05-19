@@ -17,9 +17,10 @@ def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--window-size=1920,1080")
+    # Screen size fix karni zaroori hai taaki coordinates exactly kaam karein
+    chrome_options.add_argument("--window-size=1920,1080") 
     
-    # Permissions Bypass (FORCE FLAGS)
+    # Permissions Bypass
     chrome_options.add_argument("--use-fake-ui-for-media-stream")
     chrome_options.add_argument("--use-fake-device-for-media-stream")
     chrome_options.add_argument("--autoplay-policy=no-user-gesture-required")
@@ -51,10 +52,9 @@ def start_stream():
             }
             setInterval(clickAnything, 2000); 
         """)
-        
         time.sleep(8)
         
-        # STEP 2: ENTER NAME & STUDIO
+        # STEP 2: ENTER NAME & STUDIO (Ye perfectly kaam kar raha tha)
         print("Waiting for visible Name input field...")
         input_xpath = "//input[not(@type='hidden')]"
         name_input = wait.until(EC.visibility_of_element_located((By.XPATH, input_xpath)))
@@ -72,52 +72,62 @@ def start_stream():
         print("Hunting for the 'Enter studio' button...")
         enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
         enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
-        
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
-        # Wait to load into the studio completely
-        time.sleep(8)
+        # Studio load hone ka extra time (taaki video player poora aa jaye)
+        time.sleep(12) 
 
-        # STEP 3: FORCE MAXIMIZE (SUPER AGGRESSIVE)
-        print("Maximizing the studio screen (Force Mode)... 🖥️")
+        # STEP 3: THE ULTIMATE COORDINATE CLICK 🎯
+        print("Executing exact coordinate click on the bottom-right corner... 🖥️")
         driver.execute_script("""
-            function forceMaximize() {
-                // 1. Code ke andar chup hue SVG icons ko scan karega
-                let elements = document.querySelectorAll('button, div[role="button"], svg');
-                for (let el of elements) {
-                    let htmlData = el.outerHTML.toLowerCase();
-                    // Agar element ke code me inme se kuch bhi mila
-                    if (htmlData.includes('fullscreen') || htmlData.includes('maximize') || htmlData.includes('full-screen')) {
-                        // SVG mila toh uske parent button ko target karega
-                        let target = el.tagName.toLowerCase() === 'svg' ? el.closest('button, div[role="button"]') : el;
-                        if (target) {
-                            target.click();
-                            console.log("Clicked Fullscreen Button!");
-                            return true;
+            function clickByCoordinates() {
+                // 1. Screen par sabse bada div (Main Stage area) dhoondo
+                let largestArea = 0;
+                let stage = null;
+                document.querySelectorAll('div').forEach(el => {
+                    let r = el.getBoundingClientRect();
+                    let area = r.width * r.height;
+                    // Stage usually lamba chouda hota hai (approx 600px se 1600px ke beech)
+                    if (r.width >= 600 && r.width <= 1600 && r.height >= 400 && area > largestArea) {
+                        largestArea = area;
+                        stage = el;
+                    }
+                });
+
+                if (stage) {
+                    let r = stage.getBoundingClientRect();
+                    
+                    // 2. Mouse ko stage ke beecho-beech move karo taaki controls 'Wake Up' ho jayein
+                    let centerX = r.left + (r.width / 2);
+                    let centerY = r.top + (r.height / 2);
+                    stage.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: centerX, clientY: centerY}));
+                    
+                    // Saath mein ek Double Click bhi maar do (kuch players double click pe full screen hote hain)
+                    stage.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, clientX: centerX, clientY: centerY}));
+
+                    // 3. 1 second wait karo (Controls aane ke liye) aur theek Bottom-Right corner pe click maar do
+                    setTimeout(() => {
+                        let clickX = r.right - 30; // Right side se 30 pixels andar
+                        let clickY = r.bottom - 30; // Niche se 30 pixels upar
+                        
+                        let targetEl = document.elementFromPoint(clickX, clickY);
+                        if (targetEl) {
+                            // Pura mouse click sequence force karna (Sirf click nahi, dabana aur uthana dono)
+                            targetEl.dispatchEvent(new MouseEvent('mouseover', {bubbles: true, clientX: clickX, clientY: clickY}));
+                            targetEl.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: clickX, clientY: clickY}));
+                            targetEl.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, clientX: clickX, clientY: clickY}));
+                            targetEl.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: clickX, clientY: clickY}));
+                            console.log("🎯 BOOM! Coordinate clicked exactly at:", clickX, clickY);
                         }
-                    }
+                    }, 1500); // 1.5 second ka delay wake up ke baad
                 }
-                
-                // 2. Fallback: Agar button click fail hua, toh Browser ka inbuilt fullscreen API trigger karega
-                try {
-                    let videoContainer = document.querySelector('video') ? document.querySelector('video').closest('div') : document.body;
-                    if (videoContainer && videoContainer.requestFullscreen) {
-                        videoContainer.requestFullscreen();
-                        console.log("Native Fullscreen Triggered!");
-                        return true;
-                    }
-                } catch(e) {}
-                
-                return false;
             }
-            
-            // Turant maximize karega, agar slow internet hua toh 4 second baad dobara try karega
-            if(!forceMaximize()) {
-                setTimeout(forceMaximize, 4000);
-            }
+            clickByCoordinates();
         """)
-        time.sleep(5) # Maximize hone ka waqt de rahe hain
+        
+        # Maximize hone ka waqt
+        time.sleep(5) 
 
         # FFmpeg Setup
         print("Starting FFmpeg rendering...")
