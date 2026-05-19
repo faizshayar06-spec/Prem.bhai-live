@@ -18,6 +18,7 @@ def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    # Screen size ko strict 1920x1080 par lock kar rahe hain
     chrome_options.add_argument("--window-size=1920,1080") 
     
     # Permissions Bypass
@@ -38,6 +39,7 @@ def start_stream():
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
+        driver.maximize_window() # Double safety for 1920x1080 screen size
 
         # STEP 1: FORCE CLICK POPUPS
         driver.execute_script("""
@@ -75,62 +77,31 @@ def start_stream():
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
-        # Studio aane ka pura wait (12 seconds minimum chahiye hi chahiye)
-        time.sleep(12) 
+        # Studio aane ka poora wait (15 seconds taaki player load ho jaye)
+        print("Waiting for Studio to settle...")
+        time.sleep(15) 
 
-        # STEP 3: THE PERFECT MAXIMIZE FIX 🎯
-        print("Locating the exact Black Video Stage... 🖥️")
+        # STEP 3: ABSOLUTE SCREEN COORDINATE CLICK 🎯
+        print("Targeting Maximize button via absolute PC Screen Coordinates (1345, 715)... 🖥️")
         
-        # Pehle try karte hain Mouse Double-Click se (Sabse natural tareeka)
-        try:
-            video_el = driver.find_element(By.TAG_NAME, "video")
-            ActionChains(driver).double_click(video_el).perform()
-            print("ActionChains: Double-clicked the video!")
-            time.sleep(2)
-        except:
-            pass
-
-        # Ab specific Javascript Coordinate Logic chalayenge jo sirf Black Box pe kaam karega
-        driver.execute_script("""
-            function maximizePerfectly() {
-                // Exact Video element ya 'Black Box' ko pakdo
-                let stage = document.querySelector('video');
-                if (!stage) {
-                    let divs = Array.from(document.querySelectorAll('div'));
-                    stage = divs.find(d => {
-                        let r = d.getBoundingClientRect();
-                        let bg = window.getComputedStyle(d).backgroundColor;
-                        // Sirf wahi dhoondo jo sach me video area jitna ho aur purely BLACK ho
-                        return r.width > 400 && r.height > 250 && r.width < 1500 && (bg === 'rgb(0, 0, 0)' || bg === 'rgba(0, 0, 0, 1)');
-                    });
-                }
-
-                if (stage) {
-                    let r = stage.getBoundingClientRect();
-                    
-                    // Mouse ko us black box ke center me hilao taaki controls jaag jayein
-                    let centerX = r.left + (r.width / 2);
-                    let centerY = r.top + (r.height / 2);
-                    stage.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: centerX, clientY: centerY}));
-                    
-                    setTimeout(() => {
-                        // Click EXACTLY us kaale box ke andar bottom right me. 
-                        // Help button isse bahar hoga, isliye wahan click nahi jayega.
-                        let clickX = r.right - 25; 
-                        let clickY = r.bottom - 25;
-                        
-                        let target = document.elementFromPoint(clickX, clickY);
-                        if (target) {
-                            target.click();
-                            console.log("🎯 Hit exact stage coordinate:", clickX, clickY);
-                        }
-                    }, 1000);
-                }
-            }
-            maximizePerfectly();
-        """)
+        # We will target the top-left of the webpage body to calculate exact absolute coordinates
+        body_element = driver.find_element(By.TAG_NAME, "body")
         
-        time.sleep(5) 
+        # Fixed screen coordinates determined from the 1920x1080 screenshot
+        target_x = 1345
+        target_y = 715
+        
+        # 1. Pehle mouse ko wahan move karenge taaki player ke controls 'Wake Up' ho jayein
+        print("Moving mouse to wake up player controls...")
+        ActionChains(driver).move_to_element_with_offset(body_element, target_x, target_y).perform()
+        time.sleep(1) # Controls aane ka delay
+        
+        # 2. Ab exact point par force click marenge
+        print(f"Clicking exactly at X={target_x}, Y={target_y}")
+        ActionChains(driver).move_to_element_with_offset(body_element, target_x, target_y).click().perform()
+        print("🎯 Boom! Absolute coordinate click completed successfully.")
+        
+        time.sleep(5) # Maximize animation finish hone do
 
         # FFmpeg Setup
         print("Starting FFmpeg rendering...")
