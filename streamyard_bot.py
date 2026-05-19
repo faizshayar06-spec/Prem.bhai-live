@@ -32,7 +32,7 @@ def start_stream():
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    wait = WebDriverWait(driver, 20) # 20 seconds max wait time
+    wait = WebDriverWait(driver, 25) # Thoda extra time de rahe hain
     
     try:
         print("Opening StreamYard...")
@@ -46,26 +46,34 @@ def start_stream():
                     let txt = btn.innerText.toLowerCase();
                     if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
                         btn.click();
-                        console.log('Bypassed: ' + txt);
                     }
                 });
             }
-            setInterval(clickAnything, 2000); // Har 2 sec me check karega
+            setInterval(clickAnything, 2000); 
         """)
         
-        # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
-        print("Waiting for Name input field...")
+        # Thoda wait karte hain taaki popups hatne lag jayein
+        time.sleep(8)
         
-        # Find input using explicit wait
-        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
-        name_input.clear()
+        # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
+        print("Waiting for visible Name input field...")
+        
+        # FIX: Ab ye sirf VISIBLE input dhoondega jo type="text" ho ya jiska id 'name' हो
+        input_xpath = "//input[not(@type='hidden')]"
+        name_input = wait.until(EC.visibility_of_element_located((By.XPATH, input_xpath)))
+        name_input = wait.until(EC.element_to_be_clickable((By.XPATH, input_xpath)))
+        
+        try:
+            name_input.clear()
+        except:
+            pass # Agar clear fail hota hai toh ignore karega
         
         # Native typing to bypass React state protection
         print("Typing name as a real human...")
         name_input.send_keys("Faiz")
-        time.sleep(1) # React ko state register karne ka time diya
+        time.sleep(2) # React ko state register karne ka time diya
 
-        # Hunting the "Enter Studio" button robustly (case-insensitive)
+        # Hunting the "Enter Studio" button robustly
         print("Hunting for the 'Enter studio' button...")
         enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
         enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
@@ -75,19 +83,16 @@ def start_stream():
         print("Successfully bypassed and entered the Studio! 🥀")
 
         # Wait to load into the studio completely
-        time.sleep(5)
+        time.sleep(8)
 
         # STEP 3: MAXIMIZE THE STUDIO SCREEN
         print("Maximizing the studio screen... 🖥️")
         driver.execute_script("""
-            // Ye script us button ko dhoondegi jiska naam fullscreen ya maximize se related ho
             let maximizeBtns = document.querySelectorAll('[aria-label*="fullscreen" i], [aria-label*="maximize" i], [title*="fullscreen" i], [title*="maximize" i]');
-            
             if (maximizeBtns.length > 0) {
                 maximizeBtns[0].click();
                 console.log("Studio screen maximized!");
             } else {
-                // Agar direct label nahi mila, toh SVG icons ke parent buttons ko check karega
                 let buttons = document.querySelectorAll('button');
                 for (let btn of buttons) {
                     if (btn.innerHTML.toLowerCase().includes('fullscreen') || btn.innerHTML.toLowerCase().includes('maximize')) {
@@ -97,7 +102,7 @@ def start_stream():
                 }
             }
         """)
-        time.sleep(2) # Maximize hone ke baad thoda time do
+        time.sleep(2)
 
         # STEP 4: REPETITIVE AUTO-ADD TO STAGE
         print("Activating Auto-Add to Stage script...")
