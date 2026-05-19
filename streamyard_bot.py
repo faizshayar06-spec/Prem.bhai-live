@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -17,7 +18,6 @@ def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    # Screen size fix karni zaroori hai taaki coordinates exactly kaam karein
     chrome_options.add_argument("--window-size=1920,1080") 
     
     # Permissions Bypass
@@ -54,7 +54,7 @@ def start_stream():
         """)
         time.sleep(8)
         
-        # STEP 2: ENTER NAME & STUDIO (Ye perfectly kaam kar raha tha)
+        # STEP 2: ENTER NAME & STUDIO
         print("Waiting for visible Name input field...")
         input_xpath = "//input[not(@type='hidden')]"
         name_input = wait.until(EC.visibility_of_element_located((By.XPATH, input_xpath)))
@@ -75,58 +75,61 @@ def start_stream():
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
-        # Studio load hone ka extra time (taaki video player poora aa jaye)
+        # Studio aane ka pura wait (12 seconds minimum chahiye hi chahiye)
         time.sleep(12) 
 
-        # STEP 3: THE ULTIMATE COORDINATE CLICK 🎯
-        print("Executing exact coordinate click on the bottom-right corner... 🖥️")
+        # STEP 3: THE PERFECT MAXIMIZE FIX 🎯
+        print("Locating the exact Black Video Stage... 🖥️")
+        
+        # Pehle try karte hain Mouse Double-Click se (Sabse natural tareeka)
+        try:
+            video_el = driver.find_element(By.TAG_NAME, "video")
+            ActionChains(driver).double_click(video_el).perform()
+            print("ActionChains: Double-clicked the video!")
+            time.sleep(2)
+        except:
+            pass
+
+        # Ab specific Javascript Coordinate Logic chalayenge jo sirf Black Box pe kaam karega
         driver.execute_script("""
-            function clickByCoordinates() {
-                // 1. Screen par sabse bada div (Main Stage area) dhoondo
-                let largestArea = 0;
-                let stage = null;
-                document.querySelectorAll('div').forEach(el => {
-                    let r = el.getBoundingClientRect();
-                    let area = r.width * r.height;
-                    // Stage usually lamba chouda hota hai (approx 600px se 1600px ke beech)
-                    if (r.width >= 600 && r.width <= 1600 && r.height >= 400 && area > largestArea) {
-                        largestArea = area;
-                        stage = el;
-                    }
-                });
+            function maximizePerfectly() {
+                // Exact Video element ya 'Black Box' ko pakdo
+                let stage = document.querySelector('video');
+                if (!stage) {
+                    let divs = Array.from(document.querySelectorAll('div'));
+                    stage = divs.find(d => {
+                        let r = d.getBoundingClientRect();
+                        let bg = window.getComputedStyle(d).backgroundColor;
+                        // Sirf wahi dhoondo jo sach me video area jitna ho aur purely BLACK ho
+                        return r.width > 400 && r.height > 250 && r.width < 1500 && (bg === 'rgb(0, 0, 0)' || bg === 'rgba(0, 0, 0, 1)');
+                    });
+                }
 
                 if (stage) {
                     let r = stage.getBoundingClientRect();
                     
-                    // 2. Mouse ko stage ke beecho-beech move karo taaki controls 'Wake Up' ho jayein
+                    // Mouse ko us black box ke center me hilao taaki controls jaag jayein
                     let centerX = r.left + (r.width / 2);
                     let centerY = r.top + (r.height / 2);
                     stage.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: centerX, clientY: centerY}));
                     
-                    // Saath mein ek Double Click bhi maar do (kuch players double click pe full screen hote hain)
-                    stage.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, clientX: centerX, clientY: centerY}));
-
-                    // 3. 1 second wait karo (Controls aane ke liye) aur theek Bottom-Right corner pe click maar do
                     setTimeout(() => {
-                        let clickX = r.right - 30; // Right side se 30 pixels andar
-                        let clickY = r.bottom - 30; // Niche se 30 pixels upar
+                        // Click EXACTLY us kaale box ke andar bottom right me. 
+                        // Help button isse bahar hoga, isliye wahan click nahi jayega.
+                        let clickX = r.right - 25; 
+                        let clickY = r.bottom - 25;
                         
-                        let targetEl = document.elementFromPoint(clickX, clickY);
-                        if (targetEl) {
-                            // Pura mouse click sequence force karna (Sirf click nahi, dabana aur uthana dono)
-                            targetEl.dispatchEvent(new MouseEvent('mouseover', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            targetEl.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            targetEl.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            targetEl.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            console.log("🎯 BOOM! Coordinate clicked exactly at:", clickX, clickY);
+                        let target = document.elementFromPoint(clickX, clickY);
+                        if (target) {
+                            target.click();
+                            console.log("🎯 Hit exact stage coordinate:", clickX, clickY);
                         }
-                    }, 1500); // 1.5 second ka delay wake up ke baad
+                    }, 1000);
                 }
             }
-            clickByCoordinates();
+            maximizePerfectly();
         """)
         
-        # Maximize hone ka waqt
         time.sleep(5) 
 
         # FFmpeg Setup
