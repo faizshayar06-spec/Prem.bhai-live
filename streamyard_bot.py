@@ -4,6 +4,9 @@ import subprocess
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -29,101 +32,64 @@ def start_stream():
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    wait = WebDriverWait(driver, 20) # 20 seconds max wait time
     
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
-        time.sleep(5)
 
-        # NEW MASTER CONTROL: OVERLAY BYPASS & STEP-BY-STEP CONTROLLER
-        print("Deploying Strict Step-by-Step State Machine with Permission Override...")
+        # STEP 1: FORCE CLICK POPUPS (Cookies, Continue, Allow)
         driver.execute_script("""
-            // Force browser API level permissions bypass
-            if (navigator.permissions && navigator.permissions.query) {
-                navigator.permissions.query = (auth) => {
-                    return Promise.resolve({ state: 'granted', onchange: null });
-                };
-            }
-
-            let currentStep = 1; 
-            console.log('Sequential State Engine Active.');
-
-            let masterSequence = setInterval(() => {
+            function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
-                
-                // BACKUP: Cookies clear check
-                let cookieBtn = buttons.find(b => {
-                    let t = b.innerText.toLowerCase();
-                    return t.includes('accept all') || t.includes('accept cookies') || t.includes('all cookies');
+                buttons.forEach(btn => {
+                    let txt = btn.innerText.toLowerCase();
+                    if(txt.includes('accept') || txt.includes('continue') || txt.includes('allow') || txt.includes('got it')) {
+                        btn.click();
+                        console.log('Bypassed: ' + txt);
+                    }
                 });
-                if (cookieBtn) {
-                    cookieBtn.click();
-                }
-
-                # STEP 1: FORCE OVERRIDE "ALLOW MIC/CAM ACCESS"
-                if (currentStep === 1) {
-                    let allowBtn = buttons.find(b => {
-                        let t = b.innerText.toLowerCase();
-                        return t.includes('allow mic/cam') || t.includes('allow mic') || t.includes('allow access') || t.includes('continue');
-                    });
-                    
-                    if (allowBtn) {
-                        allowBtn.focus();
-                        allowBtn.click();
-                        console.log('Step 1: Clicked Allow mic/cam access.');
-                    }
-                    
-                    // Fail-safe: 3 second baad agle step par automatically push karega agar overlay change na ho
-                    setTimeout(() => { currentStep = 2; }, 3000);
-                }
-
-                # STEP 2: NAME FIELD INJECTION (Aapka untouched working login block)
-                if (currentStep === 2) {
-                    let nameInput = document.getElementById('name') || 
-                                    document.querySelector('input[placeholder*="name"]') || 
-                                    document.querySelector('input');
-                    if (nameInput) {
-                        nameInput.focus();
-                        nameInput.value = 'Faiz'; 
-                        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-                        console.log('Step 2: Name filled with Faiz securely.');
-                        currentStep = 3;
-                    }
-                }
-
-                # STEP 3: RE-ENABLE BUTTON & FORCE CLICK ENTER STUDIO
-                if (currentStep === 3) {
-                    setTimeout(() => {
-                        let enterBtn = buttons.find(el => 
-                            el.textContent.includes('Enter studio') || 
-                            el.textContent.includes('Enter') ||
-                            el.getAttribute('type') === 'submit'
-                        );
-                        
-                        if (enterBtn) {
-                            // Agar button browser restriction ki wajah se disabled lock hai, toh use force unlock karo
-                            enterBtn.removeAttribute('disabled');
-                            enterBtn.disabled = false;
-                            
-                            enterBtn.focus();
-                            enterBtn.click();
-                            console.log('Step 3: Forced unlock and Clicked Enter Studio button!');
-                            clearInterval(masterSequence); // Sequence over, stop loop!
-                        }
-                    }, 2000); // 2 second pause state transition ke liye
-                    currentStep = 4;
-                }
-
-            }, 1500);
+            }
+            setInterval(clickAnything, 2000); // Har 2 sec me check karega
         """)
         
-        print("Sequence engine is successfully handling stages. Transitioning to studio workspace...")
-        time.sleep(35) # Live room workspace render hone tak ka wait time
+        # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
+        print("Waiting for Name input field...")
+        
+        # Find input using explicit wait
+        name_input = wait.until(EC.presence_of_element_located((By.XPATH, "//input")))
+        name_input.clear()
+        
+        # Native typing to bypass React state protection
+        print("Typing name as a real human...")
+        name_input.send_keys("Faiz")
+        time.sleep(1) # React ko state register karne ka time diya
 
-        # NOTE: AAPKE KEHNE PAR 'ADD TO STAGE' LOOP COMPLETELY DETACHED HAI
+        # Hunting the "Enter Studio" button robustly (case-insensitive)
+        print("Hunting for the 'Enter studio' button...")
+        enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
+        enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
+        
+        # Click it
+        enter_button.click()
+        print("Successfully bypassed and entered the Studio! 🥀")
 
-        # FFmpeg Section
+        # Wait to load into the studio completely
+        time.sleep(5)
+
+        # STEP 3: REPETITIVE AUTO-ADD TO STAGE
+        driver.execute_script("""
+            setInterval(() => {
+                let btns = Array.from(document.querySelectorAll('button'));
+                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
+                if (addBtn) {
+                    addBtn.click();
+                }
+            }, 5000);
+        """)
+
+        # FFmpeg
+        print("Starting FFmpeg rendering...")
         ffmpeg_cmd = [
             'ffmpeg',
             '-f', 'x11grab', '-video_size', '1920x1080', '-i', ':99.0',
@@ -134,12 +100,12 @@ def start_stream():
         ]
         
         process = subprocess.Popen(ffmpeg_cmd)
-        print("Streaming sequence activated inside studio. Track YouTube dashboard.")
+        print("Bot is doing its job. Check YouTube dashboard.")
         time.sleep(21300) 
         process.terminate()
 
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error encountered: {e}")
     finally:
         driver.quit()
 
