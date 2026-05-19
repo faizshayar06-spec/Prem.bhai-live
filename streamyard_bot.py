@@ -32,13 +32,13 @@ def start_stream():
 
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
-    wait = WebDriverWait(driver, 25) # Thoda extra time de rahe hain
+    wait = WebDriverWait(driver, 25) 
     
     try:
         print("Opening StreamYard...")
         driver.get(GUEST_URL)
 
-        # STEP 1: FORCE CLICK POPUPS (Cookies, Continue, Allow)
+        # STEP 1: FORCE CLICK POPUPS
         driver.execute_script("""
             function clickAnything() {
                 let buttons = Array.from(document.querySelectorAll('button'));
@@ -52,13 +52,10 @@ def start_stream():
             setInterval(clickAnything, 2000); 
         """)
         
-        # Thoda wait karte hain taaki popups hatne lag jayein
         time.sleep(8)
         
-        # STEP 2: ADVANCED TECHNIQUE FOR NAME & ENTER STUDIO
+        # STEP 2: ENTER NAME & STUDIO
         print("Waiting for visible Name input field...")
-        
-        # FIX: Ab ye sirf VISIBLE input dhoondega jo type="text" ho ya jiska id 'name' हो
         input_xpath = "//input[not(@type='hidden')]"
         name_input = wait.until(EC.visibility_of_element_located((By.XPATH, input_xpath)))
         name_input = wait.until(EC.element_to_be_clickable((By.XPATH, input_xpath)))
@@ -66,57 +63,63 @@ def start_stream():
         try:
             name_input.clear()
         except:
-            pass # Agar clear fail hota hai toh ignore karega
+            pass 
         
-        # Native typing to bypass React state protection
         print("Typing name as a real human...")
         name_input.send_keys("Faiz")
-        time.sleep(2) # React ko state register karne ka time diya
+        time.sleep(2) 
 
-        # Hunting the "Enter Studio" button robustly
         print("Hunting for the 'Enter studio' button...")
         enter_button_xpath = "//button[contains(translate(., 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'enter studio')]"
         enter_button = wait.until(EC.element_to_be_clickable((By.XPATH, enter_button_xpath)))
         
-        # Click it
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
         # Wait to load into the studio completely
         time.sleep(8)
 
-        # STEP 3: MAXIMIZE THE STUDIO SCREEN
-        print("Maximizing the studio screen... 🖥️")
+        # STEP 3: FORCE MAXIMIZE (SUPER AGGRESSIVE)
+        print("Maximizing the studio screen (Force Mode)... 🖥️")
         driver.execute_script("""
-            let maximizeBtns = document.querySelectorAll('[aria-label*="fullscreen" i], [aria-label*="maximize" i], [title*="fullscreen" i], [title*="maximize" i]');
-            if (maximizeBtns.length > 0) {
-                maximizeBtns[0].click();
-                console.log("Studio screen maximized!");
-            } else {
-                let buttons = document.querySelectorAll('button');
-                for (let btn of buttons) {
-                    if (btn.innerHTML.toLowerCase().includes('fullscreen') || btn.innerHTML.toLowerCase().includes('maximize')) {
-                        btn.click();
-                        break;
+            function forceMaximize() {
+                // 1. Code ke andar chup hue SVG icons ko scan karega
+                let elements = document.querySelectorAll('button, div[role="button"], svg');
+                for (let el of elements) {
+                    let htmlData = el.outerHTML.toLowerCase();
+                    // Agar element ke code me inme se kuch bhi mila
+                    if (htmlData.includes('fullscreen') || htmlData.includes('maximize') || htmlData.includes('full-screen')) {
+                        // SVG mila toh uske parent button ko target karega
+                        let target = el.tagName.toLowerCase() === 'svg' ? el.closest('button, div[role="button"]') : el;
+                        if (target) {
+                            target.click();
+                            console.log("Clicked Fullscreen Button!");
+                            return true;
+                        }
                     }
                 }
+                
+                // 2. Fallback: Agar button click fail hua, toh Browser ka inbuilt fullscreen API trigger karega
+                try {
+                    let videoContainer = document.querySelector('video') ? document.querySelector('video').closest('div') : document.body;
+                    if (videoContainer && videoContainer.requestFullscreen) {
+                        videoContainer.requestFullscreen();
+                        console.log("Native Fullscreen Triggered!");
+                        return true;
+                    }
+                } catch(e) {}
+                
+                return false;
+            }
+            
+            // Turant maximize karega, agar slow internet hua toh 4 second baad dobara try karega
+            if(!forceMaximize()) {
+                setTimeout(forceMaximize, 4000);
             }
         """)
-        time.sleep(2)
+        time.sleep(5) # Maximize hone ka waqt de rahe hain
 
-        # STEP 4: REPETITIVE AUTO-ADD TO STAGE
-        print("Activating Auto-Add to Stage script...")
-        driver.execute_script("""
-            setInterval(() => {
-                let btns = Array.from(document.querySelectorAll('button'));
-                let addBtn = btns.find(b => b.innerText.includes('Add to stage'));
-                if (addBtn) {
-                    addBtn.click();
-                }
-            }, 5000);
-        """)
-
-        # FFmpeg
+        # FFmpeg Setup
         print("Starting FFmpeg rendering...")
         ffmpeg_cmd = [
             'ffmpeg',
