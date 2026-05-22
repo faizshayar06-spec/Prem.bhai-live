@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/6ihfwcdmwx" 
+GUEST_URL = "https://streamyard.com/tfaqht4h6b" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
