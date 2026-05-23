@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains # <-- NEW IMPORT
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -54,7 +55,7 @@ def start_stream():
         """)
         time.sleep(8)
         
-        # STEP 2: ENTER NAME & STUDIO (Ye perfectly kaam kar raha tha)
+        # STEP 2: ENTER NAME & STUDIO
         print("Waiting for visible Name input field...")
         input_xpath = "//input[not(@type='hidden')]"
         name_input = wait.until(EC.visibility_of_element_located((By.XPATH, input_xpath)))
@@ -75,71 +76,43 @@ def start_stream():
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
-        # Studio load hone ka extra time (taaki video player poora aa jaye)
+        # Studio load hone ka extra time
         time.sleep(12) 
 
-        # STEP 3: THE SMART DOM CLICK 🎯 (UPDATED)
-        print("Locating and clicking the maximize button... 🖥️")
-        driver.execute_script("""
-            function clickMaximize() {
-                // Attempt 1: Agar aria-label se direct button mil jaye
-                let ariaBtns = document.querySelectorAll('[aria-label*="ullscreen"], [aria-label*="aximize"], [title*="ullscreen"]');
-                if (ariaBtns.length > 0) {
-                    ariaBtns[0].click();
-                    return;
-                }
+        # STEP 3: THE ULTIMATE ACTIONCHAINS MAXIMIZE 🎯
+        print("Waking up controls and forcing Maximize... 🖥️")
+        try:
+            actions = ActionChains(driver)
+            
+            # 1. Video tag dhoondo (Yahi sabse main element hai)
+            video_element = wait.until(EC.presence_of_element_located((By.TAG_NAME, "video")))
+            
+            # 2. Mouse ko video ke center me le jao taaki UI controls pop-up ho jayein
+            actions.move_to_element(video_element).perform()
+            time.sleep(2) 
+            
+            # 3. Pehli koshish: Fullscreen button ko dhund kar click karna
+            fs_xpath = "//button[contains(translate(@aria-label, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'fullscreen')]"
+            try:
+                fs_button = driver.find_element(By.XPATH, fs_xpath)
+                actions.move_to_element(fs_button).click().perform()
+                print("🎯 BOOM! Fullscreen button located and clicked perfectly!")
+            except:
+                print("Button ka naam nahi mila, brute-force bottom-right corner click apply kar rahe hain...")
+                # 4. Dusri koshish: Agar button ka naam change ho gaya hai, to exact bottom-right me click maaro
+                v_width = video_element.size['width']
+                v_height = video_element.size['height']
+                
+                # Center point se offset nikalna
+                x_offset = int((v_width / 2) - 40)
+                y_offset = int((v_height / 2) - 30)
+                
+                actions.move_to_element_with_offset(video_element, x_offset, y_offset).click().perform()
+                print("🎯 Bottom-right coordinate force click done!")
+                
+        except Exception as e:
+            print("Maximize block me error aaya:", e)
 
-                // Attempt 2: Smart Detection - Stage find karke bottom-right icon ko target karna
-                let largestArea = 0;
-                let stage = null;
-                document.querySelectorAll('div').forEach(el => {
-                    let r = el.getBoundingClientRect();
-                    let area = r.width * r.height;
-                    // Stage size logic
-                    if (r.width >= 600 && r.height >= 400 && area > largestArea) {
-                        largestArea = area;
-                        stage = el;
-                    }
-                });
-
-                if (stage) {
-                    let r = stage.getBoundingClientRect();
-                    let centerX = r.left + (r.width / 2);
-                    let centerY = r.top + (r.height / 2);
-                    
-                    // Mouse move karke controls ko show/wake up karna
-                    stage.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: centerX, clientY: centerY}));
-                    
-                    setTimeout(() => {
-                        // Stage ke andar ke saare buttons aur SVGs nikaalo
-                        let elements = stage.querySelectorAll('button, svg');
-                        let targetBtn = null;
-                        let maxRight = 0;
-                        
-                        elements.forEach(el => {
-                            let elRect = el.getBoundingClientRect();
-                            // Condition: Element stage ke bottom half mein hona chahiye
-                            if (elRect.top > r.top + (r.height / 2)) {
-                                // Sabse Right side wala element dhundo (jo maximize hota hai)
-                                if (elRect.right > maxRight) {
-                                    maxRight = elRect.right;
-                                    targetBtn = el;
-                                }
-                            }
-                        });
-
-                        if (targetBtn) {
-                            // Agar direct SVG mila, toh uske parent button pe click karo
-                            let clickable = targetBtn.closest('button') || targetBtn;
-                            clickable.click();
-                            console.log("🎯 Maximize button detected and clicked!");
-                        }
-                    }, 1500); // 1.5 second wait taaki controls screen par aa jayein
-                }
-            }
-            clickMaximize();
-        """)
-        
         # Maximize hone ka waqt
         time.sleep(5) 
 
