@@ -78,18 +78,25 @@ def start_stream():
         # Studio load hone ka extra time (taaki video player poora aa jaye)
         time.sleep(12) 
 
-        # STEP 3: THE ULTIMATE COORDINATE CLICK 🎯
-        print("Executing exact coordinate click on the bottom-right corner... 🖥️")
+        # STEP 3: THE SMART DOM CLICK 🎯 (UPDATED)
+        print("Locating and clicking the maximize button... 🖥️")
         driver.execute_script("""
-            function clickByCoordinates() {
-                // 1. Screen par sabse bada div (Main Stage area) dhoondo
+            function clickMaximize() {
+                // Attempt 1: Agar aria-label se direct button mil jaye
+                let ariaBtns = document.querySelectorAll('[aria-label*="ullscreen"], [aria-label*="aximize"], [title*="ullscreen"]');
+                if (ariaBtns.length > 0) {
+                    ariaBtns[0].click();
+                    return;
+                }
+
+                // Attempt 2: Smart Detection - Stage find karke bottom-right icon ko target karna
                 let largestArea = 0;
                 let stage = null;
                 document.querySelectorAll('div').forEach(el => {
                     let r = el.getBoundingClientRect();
                     let area = r.width * r.height;
-                    // Stage usually lamba chouda hota hai (approx 600px se 1600px ke beech)
-                    if (r.width >= 600 && r.width <= 1600 && r.height >= 400 && area > largestArea) {
+                    // Stage size logic
+                    if (r.width >= 600 && r.height >= 400 && area > largestArea) {
                         largestArea = area;
                         stage = el;
                     }
@@ -97,33 +104,40 @@ def start_stream():
 
                 if (stage) {
                     let r = stage.getBoundingClientRect();
-                    
-                    // 2. Mouse ko stage ke beecho-beech move karo taaki controls 'Wake Up' ho jayein
                     let centerX = r.left + (r.width / 2);
                     let centerY = r.top + (r.height / 2);
+                    
+                    // Mouse move karke controls ko show/wake up karna
                     stage.dispatchEvent(new MouseEvent('mousemove', {bubbles: true, clientX: centerX, clientY: centerY}));
                     
-                    // Saath mein ek Double Click bhi maar do (kuch players double click pe full screen hote hain)
-                    stage.dispatchEvent(new MouseEvent('dblclick', {bubbles: true, clientX: centerX, clientY: centerY}));
-
-                    // 3. 1 second wait karo (Controls aane ke liye) aur theek Bottom-Right corner pe click maar do
                     setTimeout(() => {
-                        let clickX = r.right - 30; // Right side se 30 pixels andar
-                        let clickY = r.bottom - 30; // Niche se 30 pixels upar
+                        // Stage ke andar ke saare buttons aur SVGs nikaalo
+                        let elements = stage.querySelectorAll('button, svg');
+                        let targetBtn = null;
+                        let maxRight = 0;
                         
-                        let targetEl = document.elementFromPoint(clickX, clickY);
-                        if (targetEl) {
-                            // Pura mouse click sequence force karna (Sirf click nahi, dabana aur uthana dono)
-                            targetEl.dispatchEvent(new MouseEvent('mouseover', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            targetEl.dispatchEvent(new MouseEvent('mousedown', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            targetEl.dispatchEvent(new MouseEvent('mouseup', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            targetEl.dispatchEvent(new MouseEvent('click', {bubbles: true, clientX: clickX, clientY: clickY}));
-                            console.log("🎯 BOOM! Coordinate clicked exactly at:", clickX, clickY);
+                        elements.forEach(el => {
+                            let elRect = el.getBoundingClientRect();
+                            // Condition: Element stage ke bottom half mein hona chahiye
+                            if (elRect.top > r.top + (r.height / 2)) {
+                                // Sabse Right side wala element dhundo (jo maximize hota hai)
+                                if (elRect.right > maxRight) {
+                                    maxRight = elRect.right;
+                                    targetBtn = el;
+                                }
+                            }
+                        });
+
+                        if (targetBtn) {
+                            // Agar direct SVG mila, toh uske parent button pe click karo
+                            let clickable = targetBtn.closest('button') || targetBtn;
+                            clickable.click();
+                            console.log("🎯 Maximize button detected and clicked!");
                         }
-                    }, 1500); // 1.5 second ka delay wake up ke baad
+                    }, 1500); // 1.5 second wait taaki controls screen par aa jayein
                 }
             }
-            clickByCoordinates();
+            clickMaximize();
         """)
         
         # Maximize hone ka waqt
@@ -152,3 +166,4 @@ def start_stream():
 
 if __name__ == "__main__":
     start_stream()
+    
