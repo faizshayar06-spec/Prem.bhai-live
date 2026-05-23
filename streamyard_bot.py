@@ -7,7 +7,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains # <-- NEW IMPORT
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys # Naya import (shortcuts ke liye)
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -18,7 +19,7 @@ def start_stream():
     chrome_options = Options()
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
-    # Screen size fix karni zaroori hai taaki coordinates exactly kaam karein
+    # Screen size fix
     chrome_options.add_argument("--window-size=1920,1080") 
     
     # Permissions Bypass
@@ -76,44 +77,58 @@ def start_stream():
         enter_button.click()
         print("Successfully bypassed and entered the Studio! 🥀")
 
-        # Studio load hone ka extra time
-        time.sleep(12) 
+        # STEP 3: THE WAITING GAME (Aapka Timer Idea) ⏱️
+        print("\n=======================================================")
+        print("🚨 BOT STUDIO MEIN AA GAYA HAI! 🚨")
+        print("Aapke paas 40 SECONDS hain bot ko 'STAGE' par lene ke liye.")
+        print("=======================================================\n")
+        
+        # 40 seconds ka countdown console mein dikhega
+        for i in range(40, 0, -1):
+            if i % 10 == 0 or i <= 5:
+                print(f"⏳ Waiting... {i} seconds left to add bot to stage.")
+            time.sleep(1)
+            
+        print("\nTimer over! Ab bot maximize karne ki koshish kar raha hai... 🖥️")
 
-        # STEP 3: THE ULTIMATE ACTIONCHAINS MAXIMIZE 🎯
-        print("Waking up controls and forcing Maximize... 🖥️")
+        # STEP 4: THE ULTIMATE TRIPLE-THREAT MAXIMIZE 🎯
         try:
             actions = ActionChains(driver)
             
-            # 1. Video tag dhoondo (Yahi sabse main element hai)
+            # Video element (Main Stage) dhoondhna
             video_element = wait.until(EC.presence_of_element_located((By.TAG_NAME, "video")))
             
-            # 2. Mouse ko video ke center me le jao taaki UI controls pop-up ho jayein
-            actions.move_to_element(video_element).perform()
-            time.sleep(2) 
+            # Tarika 1: Double Click (Aksar web players double-click se fullscreen ho jate hain)
+            print("Attempt 1: Double clicking the video...")
+            actions.move_to_element(video_element).double_click().perform()
+            time.sleep(1)
             
-            # 3. Pehli koshish: Fullscreen button ko dhund kar click karna
-            fs_xpath = "//button[contains(translate(@aria-label, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz'), 'fullscreen')]"
-            try:
-                fs_button = driver.find_element(By.XPATH, fs_xpath)
-                actions.move_to_element(fs_button).click().perform()
-                print("🎯 BOOM! Fullscreen button located and clicked perfectly!")
-            except:
-                print("Button ka naam nahi mila, brute-force bottom-right corner click apply kar rahe hain...")
-                # 4. Dusri koshish: Agar button ka naam change ho gaya hai, to exact bottom-right me click maaro
-                v_width = video_element.size['width']
-                v_height = video_element.size['height']
-                
-                # Center point se offset nikalna
-                x_offset = int((v_width / 2) - 40)
-                y_offset = int((v_height / 2) - 30)
-                
-                actions.move_to_element_with_offset(video_element, x_offset, y_offset).click().perform()
-                print("🎯 Bottom-right coordinate force click done!")
+            # Tarika 2: Keyboard Shortcut ('f' dabana)
+            print("Attempt 2: Sending 'f' key for fullscreen...")
+            video_element.send_keys("f")
+            time.sleep(1)
+
+            # Tarika 3: Aggressive JS Search
+            print("Attempt 3: JavaScript se Fullscreen button dhoondh kar click karna...")
+            driver.execute_script("""
+                let btns = document.querySelectorAll('button');
+                for(let btn of btns){
+                    let aria = btn.getAttribute('aria-label') || '';
+                    let title = btn.getAttribute('title') || '';
+                    if(aria.toLowerCase().includes('fullscreen') || 
+                       title.toLowerCase().includes('fullscreen') || 
+                       aria.toLowerCase().includes('maximize')) {
+                        btn.click();
+                        console.log('🎯 JS Clicked the Fullscreen button!');
+                    }
+                }
+            """)
+            print("✅ Maximize commands bhej diye gaye hain!")
                 
         except Exception as e:
-            print("Maximize block me error aaya:", e)
+            print("Maximize block me thodi dikkat aayi:", e)
 
-        # Maximize hone ka waqt
+        # Maximize hone ka final settlement time
         time.sleep(5) 
 
         # FFmpeg Setup
