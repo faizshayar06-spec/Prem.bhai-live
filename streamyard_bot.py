@@ -12,7 +12,7 @@ from selenium.webdriver.common.keys import Keys # Naya import (shortcuts ke liye
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/6ds6cdspnz" 
+GUEST_URL = "https://streamyard.com/x7hedy7jfq" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
