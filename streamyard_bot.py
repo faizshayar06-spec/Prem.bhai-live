@@ -8,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.action_chains import ActionChains
-from selenium.webdriver.common.keys import Keys # Naya import (shortcuts ke liye)
+from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
@@ -130,6 +130,27 @@ def start_stream():
 
         # Maximize hone ka final settlement time
         time.sleep(5) 
+
+        # ====================================================================
+        # NEW STEP 5: THE ANTI-TIMEOUT BYPASS (Are you still there?)
+        # ====================================================================
+        print("Injecting Anti-Timeout JavaScript bypass into browser...")
+        driver.execute_script("""
+            // Ye setInterval background me chalta rahega
+            setInterval(function() {
+                let buttons = document.querySelectorAll('button');
+                for(let i = 0; i < buttons.length; i++) {
+                    let btnText = buttons[i].innerText.toLowerCase();
+                    // Check if button text has 'stay in the studio'
+                    if(btnText.includes('stay in the studio')) {
+                        buttons[i].click();
+                        console.log('🔥 Bypassed the timeout popup automatically!');
+                    }
+                }
+            }, 10000); // Har 10 second me check karega
+        """)
+        print("✅ Anti-timeout script active! Browser khud sambhal lega popup ko.")
+        # ====================================================================
 
         # FFmpeg Setup
         print("Starting FFmpeg rendering...")
