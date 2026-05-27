@@ -12,7 +12,7 @@ from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
 # --- CONFIG ---
-GUEST_URL = "https://streamyard.com/xy7id8ff8c" 
+GUEST_URL = "https://streamyard.com/cijtbkakxp" 
 STREAM_KEY = os.getenv("YT_STREAM_KEY")
 
 def start_stream():
